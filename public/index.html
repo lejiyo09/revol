@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; manifest-src 'self'; worker-src 'self'; connect-src 'self' wss: ws:; frame-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0f1219">
+<meta name="description" content="크롬북용 개인 웹 작업 공간 — 앱 내부에 방문 기록을 저장하지 않습니다.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>Geo-Zebra</title>
+<style>
+:root{
+  --bg:#0f1219;--surface:#181c26;--elevated:#212634;--hover:#282d3c;
+  --border:#2c3244;--border-focus:#6ea8fe;
+  --text:#e2e6f0;--muted:#838da3;--placeholder:#555c70;
+  --accent:#6ea8fe;--accent-h:#8fbbff;--accent-bg:rgba(110,168,254,.12);--accent-t:#0a1628;
+  --ok:#72d89a;--ok-bg:rgba(114,216,154,.1);
+  --warn:#ffc857;--warn-bg:rgba(255,200,87,.1);
+  --danger:#ff7b7b;--danger-bg:rgba(255,123,123,.1);
+  --focus:#ffd166;
+  --r:12px;--rs:8px;--rxs:6px;
+  --shadow:0 6px 20px rgba(0,0,0,.35);
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR","Apple SD Gothic Neo",sans-serif;
+}
+[data-theme="light"]{
+  --bg:#f5f7fb;--surface:#fff;--elevated:#edf0f7;--hover:#e2e6ef;
+  --border:#d0d5e2;--border-focus:#2563eb;
+  --text:#1a1e2a;--muted:#5a6175;--placeholder:#8b91a0;
+  --accent:#2563eb;--accent-h:#1d4fd8;--accent-bg:rgba(37,99,235,.08);--accent-t:#fff;
+  --ok:#15803d;--ok-bg:rgba(21,128,61,.08);
+  --warn:#92400e;--warn-bg:rgba(146,64,14,.08);
+  --danger:#dc2626;--danger-bg:rgba(220,38,38,.08);
+  --focus:#b45309;
+  --shadow:0 4px 16px rgba(20,30,60,.1);
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:var(--rxs)}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+button,input,select{font:inherit;color:inherit}
+button{
+  cursor:pointer;border:1px solid var(--border);background:var(--elevated);
+  border-radius:var(--rs);padding:.5rem .85rem;min-height:40px;
+  display:inline-flex;align-items:center;gap:.4rem;justify-content:center;
+  transition:border-color .15s,background .15s;
+}
+button:hover{border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.btn-p{background:var(--accent);color:var(--accent-t);border-color:var(--accent);font-weight:600}
+.btn-p:hover{background:var(--accent-h)}
+.btn-d{background:var(--danger-bg);color:var(--danger);border-color:var(--danger)}
+.btn-g{background:transparent;border-color:transparent}
+.btn-g:hover{border-color:var(--border)}
+.btn-i{padding:.45rem;min-width:40px}
+
+input[type="text"],input[type="password"],input[type="url"],select{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--rs);padding:.55rem .75rem;min-height:42px;
+  transition:border-color .15s;
+}
+input:focus-visible,select:focus-visible{border-color:var(--focus)}
+input::placeholder{color:var(--placeholder)}
+label{display:block;font-weight:600;margin:.7rem 0 .25rem}
+.hint{color:var(--muted);font-size:.88rem;margin:.2rem 0 0}
+.msg{min-height:1.4em;margin:.4rem 0 0;font-size:.92rem}
+.msg-e{color:var(--danger)}.msg-ok{color:var(--ok)}.msg-w{color:var(--warn)}
+svg.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.1rem}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.spacer{flex:1}
+
+.banner{border-radius:var(--rs);padding:.65rem .85rem;border:1px solid var(--warn);background:var(--warn-bg);font-size:.92rem}
+.banner-d{border-color:var(--danger);background:var(--danger-bg)}
+.chips{display:flex;flex-wrap:wrap;gap:.3rem;margin:.4rem 0 .5rem}
+.chip{font-size:.78rem;border:1px solid var(--border);border-radius:99px;padding:.12rem .55rem}
+.chip-ok{color:var(--ok);border-color:var(--ok)}.chip-w{color:var(--warn);border-color:var(--warn)}
+
+/* ---- 잠금 화면 ---- */
+/* 잠금 화면은 불투명 전체 오버레이. 뒤의 앱(실행 중인 사이트)을 가리되 계속 돌아가게 둔다. */
+#lock{position:fixed;inset:0;z-index:10000;background:var(--bg);display:grid;place-items:center;padding:24px 16px;overflow:auto}
+.lk-box{width:100%;max-width:400px}
+.brand{display:flex;align-items:center;gap:.55rem}
+.brand .logo{width:32px;height:32px;flex:none}
+.brand b{font-size:1.2rem;letter-spacing:.01em}
+.lk-box .brand{justify-content:center;margin-bottom:.8rem}
+.lk-box h1{font-size:1.15rem;text-align:center;margin:0 0 .2rem}
+.lk-box .lead{text-align:center;color:var(--muted);margin:0 0 .9rem;font-size:.95rem}
+.pin-in{font-size:1.25rem;letter-spacing:.3em;text-align:center}
+.lk-acts{margin-top:.8rem;display:grid;gap:.45rem}
+.lk-foot{margin-top:.8rem;font-size:.88rem;color:var(--muted)}
+.lk-foot details{margin-top:.5rem}
+.lk-foot summary{cursor:pointer;font-weight:600;font-size:.88rem}
+
+/* ---- 앱 ---- */
+#app{min-height:100%;display:flex;flex-direction:column}
+.topbar{
+  display:flex;align-items:center;gap:.5rem;padding:6px 16px;
+  border-bottom:1px solid var(--border);background:var(--surface);
+  position:sticky;top:0;z-index:6;
+}
+.topbar .acts{margin-left:auto;display:flex;gap:.35rem;flex:none}
+.topbar .brand{flex:none}
+
+/* 탭 */
+.tabbar{flex:1;min-width:0;display:flex;align-items:center;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.tabbar::-webkit-scrollbar{display:none}
+.tab{flex:0 1 200px;min-width:72px;max-width:220px;height:36px;display:flex;align-items:center;gap:.4rem;padding:0 .2rem 0 .55rem;border:1px solid transparent;border-radius:var(--rs);cursor:pointer;font-size:.85rem;color:var(--muted);user-select:none;transition:background .15s,border-color .15s}
+.tab:hover{background:var(--hover)}
+.tab[aria-selected="true"]{background:var(--elevated);border-color:var(--border);color:var(--text)}
+.tab-ic{flex:none;width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-size:.72rem;font-weight:700;background:var(--accent);color:var(--accent-t)}
+svg.tab-ic{background:none;color:inherit;padding:0}
+.tab.ld .tab-ic{background:none;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;color:transparent;animation:sp .85s linear infinite}
+.tab-tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tab-x{flex:none;min-height:24px;min-width:24px;padding:0;border:0;background:transparent;border-radius:6px}
+.tab-x svg.ic{width:14px;height:14px}
+.tab-x:hover{background:var(--hover)}
+.tab-new{flex:none;min-height:32px;min-width:32px;padding:0;border-color:transparent;background:transparent}
+.tab-new:hover{background:var(--hover)}
+/* 탭이 많으면 Chrome처럼 더 좁아지고, 선택되지 않은 탭의 닫기 버튼은 마우스를 올릴 때만 보인다. */
+.tabbar.many .tab{min-width:44px;padding-left:.45rem}
+.tabbar.many .tab:not([aria-selected="true"]):not(:hover) .tab-x{display:none}
+.topbar:has(.tabbar.many) .brand b{display:none}
+@media(prefers-reduced-motion:reduce){.tab.ld .tab-ic{animation:none}}
+@media(max-width:840px){.topbar .brand b,.topbar .bl{display:none}}
+.bl{display:inline}
+
+#addr-form{display:flex;gap:.5rem;padding:6px 16px 2px;max-width:1080px;width:100%;margin:0 auto}
+#addr-form .fld{flex:1;position:relative}
+#addr-in{padding-left:2.2rem;min-height:40px;font-size:.95rem}
+#addr-form .fld svg{position:absolute;left:.65rem;top:50%;transform:translateY(-50%);color:var(--muted)}
+#addr-msg{padding:0 16px;max-width:1080px;width:100%;margin:0 auto;font-size:.82rem;min-height:0}
+#addr-msg:empty{display:none}
+main{flex:1;display:flex;flex-direction:column;width:100%}
+
+/* 대시보드 */
+#dash{
+  max-width:1080px;width:100%;margin:0 auto;padding:8px 16px 32px;
+  display:grid;gap:14px;
+  grid-template-columns:minmax(0,2fr) minmax(0,1fr);
+  grid-template-areas:"bn bn" "sc po" "bm po";
+  grid-template-rows:auto auto 1fr;align-items:start;
+}
+#lim-ban{grid-area:bn}
+#sc-card{grid-area:sc}#bm-card{grid-area:bm}#pol-card{grid-area:po}
+.ch{display:flex;align-items:center;gap:.45rem;margin-bottom:.5rem}
+.ch h2{margin:0;font-size:1rem}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:.55rem}
+.tile{position:relative;border:1px solid var(--border);background:var(--elevated);border-radius:var(--rs);display:flex;flex-direction:column;transition:border-color .15s}
+.tile:hover{border-color:var(--accent)}
+.tile .to{border:0;background:transparent;width:100%;flex-direction:column;padding:.7rem .45rem .3rem;min-height:88px}
+.tile .to:hover{background:transparent}
+.av{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:1.05rem;background:var(--accent);color:var(--accent-t)}
+.tile .tt{font-size:.85rem;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .th{font-size:.72rem;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .tls{display:flex;justify-content:center;gap:.15rem;padding:0 .25rem .3rem}
+.tile .tls button,.lst .tls button{min-height:30px;padding:.2rem .4rem;font-size:.78rem;background:transparent}
+
+.lst{list-style:none;padding:0;display:grid;gap:.35rem}
+.lst li{display:flex;align-items:center;gap:.55rem;border:1px solid var(--border);background:var(--elevated);border-radius:var(--rs);padding:.3rem .45rem;transition:border-color .15s}
+.lst li:hover{border-color:var(--accent)}
+.lst .to{flex:1;min-width:0;justify-content:flex-start;border:0;background:transparent;text-align:left}
+.lst .to .av{width:28px;height:28px;border-radius:8px;font-size:.85rem}
+.lst .meta{min-width:0;display:flex;flex-direction:column}
+.lst .meta .tt{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.lst .meta .th{font-size:.78rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lst .tls{display:flex;gap:.15rem}
+.empty{color:var(--muted);font-size:.92rem;margin:.15rem 0}
+
+#pol-card p,#pol-card li{font-size:.88rem}
+#pol-card h3{font-size:.92rem;margin:.7rem 0 .15rem;font-weight:600}
+#pol-card ul{margin:.2rem 0;padding-left:1.1rem}
+#pol-card li{margin:.15rem 0}
+
+/* ---- 뷰어 ---- */
+#viewer{flex:1;display:flex;flex-direction:column;padding:2px 16px 16px;min-height:0}
+.vbtn{display:none;min-height:36px;padding:.25rem;min-width:36px}
+.vbtn.vbtn-txt{min-width:52px;font-size:.78rem;font-weight:600;padding:.25rem .4rem}
+#v-zoom-menu{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);box-shadow:var(--shadow);padding:.3rem;display:none;flex-direction:column;gap:.2rem;z-index:40;min-width:160px}
+#v-zoom-menu.show{display:flex}
+#v-zoom-menu .row{display:flex;align-items:center;gap:.3rem;justify-content:space-between}
+#v-zoom-menu button{min-height:30px;padding:.25rem .55rem;font-size:.82rem}
+#v-zoom-menu .zv{flex:1;text-align:center;font-weight:600}
+.vbtn:disabled{opacity:.35;cursor:not-allowed}
+#addr-form.vw .vbtn{display:inline-flex}
+#addr-form.vw #addr-go{display:none}
+#addr-form.vw #addr-in{border-left:3px solid var(--ok)}
+.fwrap{position:relative;flex:1;min-height:55vh;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:#fff}
+.tabpane{position:absolute;inset:0}
+.fwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
+.v-load{position:absolute;inset:0;display:grid;place-items:center;background:var(--surface);color:var(--text);z-index:2;text-align:center;padding:16px}
+.spin{width:32px;height:32px;border-radius:50%;border:3.5px solid var(--border);border-top-color:var(--accent);animation:sp .85s linear infinite;margin:0 auto .5rem}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+
+.v-err{text-align:left;max-width:480px;margin:0 auto}
+.v-err h3{font-size:1rem;margin:0 0 .5rem;color:var(--danger)}
+.v-err ul{margin:.3rem 0 .6rem;padding-left:1.1rem;font-size:.9rem}
+.v-err li{margin:.2rem 0}
+.v-err .row{margin-top:.5rem}
+
+/* ---- 대화상자 ---- */
+dialog{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0;width:min(540px,calc(100vw - 32px));max-height:calc(100vh - 32px);box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+.dh{display:flex;align-items:center;padding:.9rem 1.1rem .35rem;gap:.45rem}
+.dh h2{margin:0;font-size:1.1rem;flex:1}
+.db{padding:0 1.1rem .9rem;overflow-y:auto}
+.df{display:flex;justify-content:flex-end;gap:.45rem;padding:.7rem 1.1rem 1rem;border-top:1px solid var(--border);flex-wrap:wrap}
+.sect{border-top:1px solid var(--border);padding-top:.7rem;margin-top:.85rem}
+.sect h3{margin:0 0 .25rem;font-size:.98rem}
+.chk{display:flex;gap:.55rem;align-items:flex-start;font-weight:400;margin:.5rem 0;font-size:.92rem}
+.chk input{width:18px;height:18px;margin-top:.15rem;flex:none}
+.rr{display:flex;gap:.9rem;flex-wrap:wrap}
+.rr label{display:flex;align-items:center;gap:.35rem;font-weight:400;margin:.25rem 0;font-size:.92rem}
+.rr input{width:17px;height:17px}
+pre.rpt{white-space:pre-wrap;word-break:break-all;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);padding:.55rem;font-size:.8rem;max-height:200px;overflow:auto}
+
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--elevated);border:1px solid var(--border);border-radius:99px;padding:.5rem .9rem;box-shadow:var(--shadow);z-index:50;max-width:calc(100vw - 32px);font-size:.9rem}
+
+/* ---- 반응형 ---- */
+@media(max-width:840px){
+  #dash{grid-template-columns:minmax(0,1fr);grid-template-areas:"bn" "sc" "bm" "po";grid-template-rows:none}
+}
+@media(max-width:540px){
+  .bl{display:none}
+  .brand b{font-size:1.05rem}
+  #addr-form button .bl{display:inline}
+  .fwrap{min-height:50vh}
+}
+</style>
+</head>
+<body>
+<noscript><p style="padding:16px">Geo-Zebra는 JavaScript가 필요합니다. 브라우저 설정에서 JavaScript를 허용해 주세요.</p></noscript>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
+  <symbol id="i-go" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4l-5.5 2.9 1-6.2L3 9.7l6.2-.9z"/></symbol>
+  <symbol id="i-ref" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.2L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z"/></symbol>
+</svg>
+
+<div id="frame-guard" hidden>
+  <p style="padding:16px">보안을 위해 Geo-Zebra는 다른 페이지 안에 삽입된 상태로 실행되지 않습니다. 주소창에서 직접 열어 주세요.</p>
+</div>
+
+<!-- ===== 잠금 화면 ===== -->
+<section id="lock" aria-labelledby="lk-t" hidden>
+  <div class="lk-box">
+    <div class="brand"><img class="logo" src="icons/icon-192.png" alt=""><b>Geo-Zebra</b></div>
+    <div class="card">
+      <h1 id="lk-t">잠금 해제</h1>
+      <p class="lead" id="lk-lead">PIN을 입력하세요.</p>
+
+      <form id="f-unlock" autocomplete="off" hidden novalidate>
+        <label for="u-pin" class="sr">PIN</label>
+        <input id="u-pin" class="pin-in" type="password" inputmode="numeric" autocomplete="off" maxlength="12" spellcheck="false" aria-describedby="u-msg">
+        <p class="msg" id="u-msg" role="alert" aria-live="assertive"></p>
+        <div class="lk-acts"><button type="submit" class="btn-p" id="u-go">잠금 해제</button></div>
+      </form>
+
+      <div id="unavail" hidden>
+        <p class="banner banner-d">이 환경에서는 Web Crypto API를 사용할 수 없어 PIN을 확인할 수 없습니다. HTTPS 주소(GitHub Pages, Render 등)로 열어 주세요.</p>
+      </div>
+
+      <div class="lk-foot">
+        <button type="button" class="btn-g" id="forgot-btn">이 기기의 즐겨찾기·설정 초기화</button>
+        <details>
+          <summary>이 잠금이 보호하는 범위</summary>
+          <ul style="margin:.3rem 0;padding-left:1.1rem;font-size:.88rem">
+            <li>같은 기기를 잠깐 보는 사람이 화면과 즐겨찾기를 바로 보지 못하게 하는 <strong>가벼운 화면 잠금</strong>입니다.</li>
+            <li>강력한 계정 인증이 아닙니다. 짧은 숫자 PIN은 기기에 접근할 수 있는 사람이 짧은 시간에 모두 시도할 수 있습니다.</li>
+            <li>소스 코드 변경, 개발자 도구를 통한 저장소 접근, 사이트 데이터 삭제로 우회·초기화될 수 있습니다.</li>
+            <li>Chrome 방문 기록, Google 계정 활동, 학교 기기 관리·네트워크 기록에는 아무런 영향을 주지 않습니다.</li>
+          </ul>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 앱 ===== -->
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="brand"><img class="logo" src="icons/icon-192.png" alt=""><b>Geo-Zebra</b></div>
+    <div id="tabbar" class="tabbar" role="tablist" aria-label="탭"></div>
+    <button type="button" id="tab-new" class="tab-new" title="새 탭 (Alt+T)" aria-label="새 탭"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+    <div class="acts">
+      <button type="button" id="conn-status" class="chip chip-ok" title="클릭해서 프록시/에이전트 모드 전환 — 자세히는 호버하세요" style="font-size:.72rem;cursor:pointer;border:1px solid currentColor;background:transparent">● 프록시</button>
+      <button type="button" id="btn-home" title="홈"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span class="bl">홈</span></button>
+      <button type="button" id="btn-lock" title="잠금 (Alt+L)"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span class="bl">잠금</span></button>
+      <button type="button" id="btn-set" title="설정"><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg><span class="bl">설정</span></button>
+    </div>
+  </header>
+
+  <form id="addr-form" autocomplete="off" novalidate role="search" aria-label="웹 주소로 이동">
+    <button type="button" id="v-back" class="vbtn" title="뒤로 (Alt+←)" disabled><svg class="ic" aria-hidden="true"><use href="#i-back"/></svg></button>
+    <button type="button" id="v-fwd" class="vbtn" title="앞으로 (Alt+→)" disabled><svg class="ic" aria-hidden="true"><use href="#i-fwd"/></svg></button>
+    <button type="button" id="v-ref" class="vbtn" title="새로고침 (F5)"><svg class="ic" aria-hidden="true"><use href="#i-ref"/></svg></button>
+    <button type="button" id="v-zoom" class="vbtn vbtn-txt" title="확대·축소 (Ctrl +/-/0)" aria-label="확대 축소">100%</button>
+    <div class="fld">
+      <svg class="ic" aria-hidden="true"><use href="#i-globe"/></svg>
+      <label for="addr-in" class="sr">웹 주소</label>
+      <input id="addr-in" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+             placeholder="주소 또는 검색어 입력 ( / 키로 포커스)" maxlength="2048" aria-describedby="addr-msg">
+    </div>
+    <button type="submit" class="btn-p" id="addr-go"><svg class="ic" aria-hidden="true"><use href="#i-go"/></svg><span class="bl">이동</span></button>
+    <button type="button" id="v-save" class="vbtn" title="즐겨찾기에 저장"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg></button>
+    <button type="button" id="v-tab" class="vbtn" title="Chrome 새 탭에서 열기 (Chrome 기록에 남음)"><svg class="ic" aria-hidden="true"><use href="#i-ext"/></svg></button>
+    <button type="button" id="v-close" class="vbtn" title="탭 닫기 (Alt+W)"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+  </form>
+  <div id="v-zoom-menu" role="dialog" aria-label="확대 축소">
+    <div class="row">
+      <button type="button" id="zm-out" title="축소 (Ctrl+-)" aria-label="축소">−</button>
+      <span class="zv" id="zm-val">100%</span>
+      <button type="button" id="zm-in" title="확대 (Ctrl++)" aria-label="확대">+</button>
+    </div>
+    <button type="button" id="zm-reset">기본 (100%)</button>
+  </div>
+  <p class="msg" id="addr-msg" aria-live="polite"></p>
+
+  <main>
+    <!-- 대시보드 -->
+    <div id="dash">
+      <div id="lim-ban" class="banner" hidden></div>
+
+      <section class="card" id="sc-card">
+        <div class="ch">
+          <h2><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg> 바로가기</h2>
+          <span class="spacer"></span>
+          <button type="button" id="add-sc"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>추가</button>
+        </div>
+        <p class="hint" style="margin:0 0 .5rem">직접 등록한 항목만 표시됩니다. 방문 사이트가 자동 추가되지 않습니다.</p>
+        <div class="tiles" id="sc-tiles"></div>
+        <p class="empty" id="sc-empty">등록한 바로가기가 없습니다.</p>
+      </section>
+
+      <section class="card" id="bm-card">
+        <div class="ch">
+          <h2><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg> 즐겨찾기</h2>
+          <span class="spacer"></span>
+          <button type="button" id="add-bm"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>추가</button>
+        </div>
+        <p class="hint" style="margin:0 0 .5rem">"저장" 버튼을 눌러 직접 저장한 주소만 남습니다. 방문 기록이 아닙니다.</p>
+        <ul class="lst" id="bm-list"></ul>
+        <p class="empty" id="bm-empty">저장한 즐겨찾기가 없습니다.</p>
+      </section>
+
+      <aside class="card" id="pol-card">
+        <h2 style="font-size:1rem;margin:0 0 .3rem;display:flex;align-items:center;gap:.4rem"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>보안 및 저장 정책</h2>
+        <div class="chips" id="st-chips"></div>
+        <h3>이 앱이 하는 일</h3>
+        <ul>
+          <li>방문한 주소, 검색어, 방문 시간, 페이지 제목을 <strong>자동으로 저장하지 않습니다.</strong></li>
+          <li>iframe 안에서 본 사이트는 <strong>Chrome 방문 기록에 나타나지 않습니다.</strong> Chrome 기록에는 Geo-Zebra 페이지 주소만 남습니다.</li>
+          <li>모든 사이트는 Geo-Zebra 서버(Render)를 거치는 프록시(Ultraviolet)로 iframe 안에서 열립니다. 따라서 방문하는 사이트와의 통신은 이 서버를 지나갑니다. 서버는 주소를 기록하지 않습니다.</li>
+          <li>사이트가 남기는 저장 데이터는 닫기·잠금·앱 시작 시 지웁니다. 단, "사이트 로그인 유지"(설정, 기본 켜짐)가 켜져 있으면 로그인 쿠키는 남깁니다.</li>
+          <li>직접 "저장"한 항목만 이 기기 저장소에 AES-GCM으로 암호화해 보관합니다.</li>
+          <li>분석·광고·추적 코드를 쓰지 않습니다.</li>
+        </ul>
+        <h3>이 앱이 제어할 수 없는 것</h3>
+        <ul>
+          <li>Chrome 방문 기록 — 앱 안의 탭에서 본 사이트는 기록되지 않으나, "Chrome 새 탭에서 열기"로 연 사이트는 Chrome 기록에 남습니다</li>
+          <li>Google 계정의 웹 및 앱 활동 (Google에 로그인 상태라면 서버 측 활동 기록이 남을 수 있음)</li>
+          <li>학교 기기 관리 정책·네트워크·필터링 기록</li>
+          <li>방문한 사이트가 자체적으로 남기는 기록</li>
+        </ul>
+        <p class="hint">위 항목은 앱 밖의 시스템이므로 이 앱이 지우거나 차단할 수 없습니다.</p>
+      </aside>
+    </div>
+
+    <!-- 뷰어 -->
+    <section id="viewer" aria-label="웹사이트 보기" hidden>
+      <div class="fwrap" id="fwrap"></div>
+    </section>
+  </main>
+
+  <!-- 설정 -->
+  <dialog id="d-set" aria-labelledby="set-t">
+    <div class="dh"><h2 id="set-t">설정</h2><button type="button" class="btn-i btn-g" data-close aria-label="닫기"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+    <div class="db">
+      <label for="s-theme">화면 테마</label>
+      <select id="s-theme"><option value="dark">다크</option><option value="light">라이트</option><option value="system">시스템 설정 따르기</option></select>
+
+      <label for="s-idle">자동 잠금 (비활성 시간)</label>
+      <select id="s-idle"><option value="1">1분</option><option value="3">3분</option><option value="5">5분 (기본)</option><option value="10">10분</option><option value="15">15분</option><option value="0">사용 안 함</option></select>
+
+      <label class="chk"><input type="checkbox" id="s-hide"><span>다른 탭/창 전환 또는 화면 꺼짐 시 바로 잠그기</span></label>
+      <label class="chk"><input type="checkbox" id="s-pop"><span>iframe 내 팝업 허용 — 사이트가 연 새 창은 Chrome 기록에 남을 수 있습니다.</span></label>
+      <label class="chk"><input type="checkbox" id="s-keep"><span>사이트 로그인 유지 — 닫기·잠금 후에도 네이버·Google 등의 로그인 쿠키를 지우지 않습니다. 쿠키는 이 기기의 Geo-Zebra 사이트 데이터에만 남고 Chrome 방문 기록과는 무관하지만, 이 기기에서 개발자 도구를 열면 로그인한 사이트 이름이 보입니다.</span></label>
+      <button type="button" id="clr-login" style="margin-top:.2rem">로그인 정보 지금 지우기</button>
+
+
+      <div class="sect">
+        <h3>저장 데이터 점검</h3>
+        <p class="hint">이 사이트가 브라우저에 저장한 항목과 평문 URL 포함 여부를 확인합니다.</p>
+        <button type="button" id="chk-btn" style="margin-top:.4rem">지금 점검</button>
+        <pre class="rpt" id="chk-rpt" hidden></pre>
+      </div>
+
+      <div class="sect">
+        <h3>보안상 한계</h3>
+        <ul style="font-size:.88rem;padding-left:1.1rem">
+          <li>PIN 잠금은 화면 가림용 가벼운 보호이며 계정 인증이 아닙니다.</li>
+          <li>PIN은 모든 기기에서 같은 값으로 고정되어 있고, 그 검증값(PBKDF2 해시)이 앱 코드에 들어 있습니다. 6자리 숫자는 경우의 수가 적어, 코드를 본 사람은 컴퓨터로 모든 숫자를 대입해 PIN을 알아낼 수 있습니다.</li>
+          <li>잠금은 이 화면에서만 동작합니다. 서버 주소를 아는 사람이 개발자 도구로 화면을 우회하면 프록시는 PIN 없이 쓸 수 있습니다.</li>
+          <li>코드 변경, 개발자 도구, 확장 프로그램, 사이트 데이터 삭제로 우회·초기화 가능합니다.</li>
+          <li>프록시로 연 사이트의 스크립트는 이 앱과 같은 출처에서 실행됩니다. 악의적인 사이트라면 이 기기에 저장된 암호화된 즐겨찾기와 PIN 검증값을 읽어 갈 수 있으니, 믿을 수 있는 사이트만 여세요.</li>
+          <li>Chrome 기록, Google 계정 활동, 학교 관리 기록에는 영향을 주지 않습니다.</li>
+        </ul>
+      </div>
+
+      <div class="sect">
+        <h3>초기화</h3>
+        <p class="hint">바로가기·즐겨찾기, 앱 설정, 오프라인 캐시를 이 기기에서 삭제합니다. 되돌릴 수 없습니다. PIN은 고정이라 바뀌지 않습니다.</p>
+        <button type="button" class="btn-d" id="reset-btn" style="margin-top:.4rem">모든 저장 데이터 초기화</button>
+      </div>
+    </div>
+    <div class="df"><button type="button" data-close>닫기</button></div>
+  </dialog>
+
+  <!-- 항목 추가/수정 -->
+  <dialog id="d-item" aria-labelledby="it-t">
+    <form id="f-item" autocomplete="off" novalidate>
+      <div class="dh"><h2 id="it-t">항목 추가</h2></div>
+      <div class="db">
+        <p class="hint" id="it-note"></p>
+        <label for="it-name">이름</label>
+        <input id="it-name" type="text" maxlength="60" autocomplete="off" spellcheck="false">
+        <label for="it-url">주소</label>
+        <input id="it-url" type="text" inputmode="url" maxlength="2048" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://">
+        <fieldset style="border:0;padding:0;margin:.7rem 0 0">
+          <legend style="font-weight:600">표시 위치</legend>
+          <div class="rr">
+            <label><input type="radio" name="it-k" value="shortcut"> 바로가기 (타일)</label>
+            <label><input type="radio" name="it-k" value="bookmark"> 즐겨찾기 (목록)</label>
+          </div>
+        </fieldset>
+        <p class="msg" id="it-msg" role="alert" aria-live="assertive"></p>
+      </div>
+      <div class="df"><button type="button" data-close>취소</button><button type="submit" class="btn-p">저장</button></div>
+    </form>
+  </dialog>
+</div>
+
+<!-- 확인 대화상자 -->
+<dialog id="d-cfm" aria-labelledby="cfm-t">
+  <form id="f-cfm" autocomplete="off" novalidate>
+    <div class="dh"><h2 id="cfm-t">확인</h2></div>
+    <div class="db">
+      <p id="cfm-body" style="white-space:pre-line"></p>
+      <div id="cfm-tw" hidden><label for="cfm-ti" id="cfm-tl"></label><input id="cfm-ti" type="text" autocomplete="off" spellcheck="false"></div>
+      <p class="msg msg-e" id="cfm-msg" role="alert"></p>
+    </div>
+    <div class="df">
+      <button type="button" id="cfm-no">취소</button>
+      <button type="submit" class="btn-p" id="cfm-ok">확인</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="/baremux/index.js"></script>
+<script>
+(()=>{
+'use strict';
+
+/* =========== 상수 =========== */
+const STORE='qs:v1',PIN_RE=/^\d{4,12}$/;
+// 고정 PIN의 PBKDF2-SHA256 검증값(임의 salt). PIN 자체는 코드에 없다.
+const FIXED_PIN={s:'fdPFKk+UvweA2maXJwXV9A==',i:310000,v:'0UA3nQjnDWFVUDQm+JC4Gzr0J3wtki01WzAW+CxiVxI='};
+const MAX_ATT=5,LOCK_BASE=30000,LOCK_MAX=900000;
+const IDLE_CK=10000,FRAME_TO=25000,MAX_RETRY=5,RETRY_DELAY=1500;
+const MAX_ITEMS=100,MAX_URL=2048;
+const IDLE_OPTS=[0,1,3,5,10,15]; // 0 = 자동 잠금 사용 안 함
+
+const BLOCKERS=[];
+
+/* =========== 상태 (메모리 전용) =========== */
+const S={
+  mode:'secure',reasons:[],store:null,unlocked:false,key:null,items:[],
+  busy:false,lastAct:Date.now(),
+  idleTm:null,lockTm:null,toastTm:null,
+  editId:null,swOk:false,
+  tabs:[],act:null,tabSeq:0
+};
+const $=id=>document.getElementById(id);
+
+/* =========== 저장소 =========== */
+function defaults(){return{v:1,set:{theme:'dark',idle:5,lockHide:false,popups:false,keepLogin:true},pin:{...FIXED_PIN},vault:null,guard:{f:0,u:0}}}
+
+function storageOk(){try{const k='qs:t';localStorage.setItem(k,'1');localStorage.removeItem(k);return true}catch(e){return false}}
+
+function load(){
+  const b=defaults();let r;
+  try{r=localStorage.getItem(STORE)}catch(e){return b}
+  if(!r)return b;
+  try{
+    const d=JSON.parse(r);if(!d||typeof d!=='object')return b;
+    const s=d.set||{};
+    b.set.theme=['dark','light','system'].includes(s.theme)?s.theme:'dark';
+    b.set.idle=IDLE_OPTS.includes(s.idle)?s.idle:5;
+    b.set.lockHide=s.lockHide===true;b.set.popups=s.popups===true;b.set.keepLogin=s.keepLogin!==false;
+    // 예전에 다른 PIN으로 암호화된 즐겨찾기는 고정 PIN 키로 열 수 없으므로 버린다.
+    const p=d.pin,samePin=p&&p.s===FIXED_PIN.s&&p.v===FIXED_PIN.v&&p.i===FIXED_PIN.i;
+    const vt=d.vault;
+    if(samePin&&vt&&typeof vt.iv==='string'&&typeof vt.ct==='string')b.vault={iv:vt.iv,ct:vt.ct};
+    const g=d.guard||{};
+    b.guard.f=Number.isInteger(g.f)&&g.f>=0?g.f:0;
+    b.guard.u=typeof g.u==='number'&&g.u>0?g.u:0;
+    return b;
+  }catch(e){return b}
+}
+
+function save(){
+  if(S.mode!=='secure')return false;
+  try{localStorage.setItem(STORE,JSON.stringify(S.store));return true}catch(e){toast('저장 실패. 브라우저 저장 공간을 확인하세요.');return false}
+}
+
+async function clearAll(){
+  try{const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('qs'))ks.push(k)}ks.forEach(k=>localStorage.removeItem(k))}catch(e){}
+  try{sessionStorage.clear()}catch(e){}
+  try{if('caches' in window){const n=await caches.keys();await Promise.all(n.filter(x=>x.startsWith('qs')).map(x=>caches.delete(x)))}}catch(e){}
+}
+
+/* =========== 암호화 =========== */
+function hasCrypto(){return!!(window.isSecureContext&&crypto&&crypto.subtle&&crypto.getRandomValues)}
+function rnd(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return a}
+function b64e(b){let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s)}
+function b64d(s){const r=atob(s),o=new Uint8Array(r.length);for(let i=0;i<r.length;i++)o[i]=r.charCodeAt(i);return o}
+
+async function derive(pin,salt,iter){
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);
+  const bits=new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt,iterations:iter},base,512));
+  const ver=bits.slice(0,32);
+  const key=await crypto.subtle.importKey('raw',bits.slice(32,64),{name:'AES-GCM'},false,['encrypt','decrypt']);
+  bits.fill(0);return{ver,key};
+}
+
+function tsEqual(a,b){if(a.length!==b.length)return false;let d=0;for(let i=0;i<a.length;i++)d|=a[i]^b[i];return d===0}
+
+async function enc(key,obj){
+  const iv=rnd(12),data=new TextEncoder().encode(JSON.stringify(obj));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,data));
+  return{iv:b64e(iv),ct:b64e(ct)};
+}
+
+async function dec(key,v){
+  const p=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(v.iv)},key,b64d(v.ct));
+  return JSON.parse(new TextDecoder().decode(p));
+}
+
+function uid(){
+  if(window.isSecureContext&&crypto.randomUUID)return crypto.randomUUID();
+  return'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+}
+
+/* =========== PIN =========== */
+async function ckPin(pin){
+  const r=S.store.pin;if(!r||!PIN_RE.test(pin))return null;
+  const{ver,key}=await derive(pin,b64d(r.s),r.i);
+  return tsEqual(ver,b64d(r.v))?key:null;
+}
+
+function lockMs(){const u=S.store.guard.u;return u>Date.now()?u-Date.now():0}
+
+function regFail(){
+  const g=S.store.guard;g.f++;
+  if(g.f>=MAX_ATT){g.u=Date.now()+Math.min(LOCK_BASE*Math.pow(2,g.f-MAX_ATT),LOCK_MAX)}
+  save();
+}
+
+function rstFail(){S.store.guard={f:0,u:0};save()}
+
+function fmtWait(ms){const s=Math.ceil(ms/1000);if(s<60)return s+'초';const m=Math.floor(s/60),r=s%60;return r?m+'분 '+r+'초':m+'분'}
+
+/* =========== 잠금 화면 =========== */
+function showLock(mode){
+  // 앱은 숨기지 않는다(뒤에서 사이트가 계속 돌아가야 함). 불투명 오버레이로 가리고,
+  // inert로 가려진 앱에 키보드 포커스·클릭이 들어가지 못하게 막는다(미디어·연결은 계속 유지됨).
+  $('lock').hidden=false;
+  try{ $('app').inert=true; }catch(e){}
+  $('f-unlock').hidden=mode!=='unlock';$('unavail').hidden=mode!=='unavail';
+  $('forgot-btn').hidden=S.mode!=='secure';
+  if(mode==='unlock'){
+    $('lk-t').textContent='잠금 해제';$('lk-lead').textContent='PIN을 입력하세요.';
+    clr(['u-pin']);setMsg('u-msg','');lockUi();if(!$('u-pin').disabled)$('u-pin').focus();
+  }else{$('lk-t').textContent='잠금 해제 불가';$('lk-lead').textContent=''}
+}
+
+function lockUi(){
+  clearInterval(S.lockTm);S.lockTm=null;
+  const tick=()=>{
+    const r=lockMs(),bl=r>0;
+    $('u-pin').disabled=bl;$('u-go').disabled=bl||S.busy;
+    if(bl)setMsg('u-msg','시도가 많습니다. '+fmtWait(r)+' 후 다시 시도하세요.','w');
+    else if(S.lockTm){clearInterval(S.lockTm);S.lockTm=null;setMsg('u-msg','');$('u-pin').focus()}
+    return bl;
+  };
+  if(tick())S.lockTm=setInterval(tick,1000);
+}
+
+async function onUnlock(ev){
+  ev.preventDefault();if(S.busy||lockMs()>0)return;
+  const pin=$('u-pin').value;$('u-pin').value='';
+  if(!pin){setMsg('u-msg','PIN을 입력하세요.','e');return}
+  busy(true,'u-go','확인 중…');
+  let key;try{key=await ckPin(pin)}catch(e){key=null}
+  if(!key){regFail();busy(false,'u-go','잠금 해제');setMsg('u-msg','PIN이 올바르지 않습니다.','e');lockUi();if(!$('u-pin').disabled)$('u-pin').focus();return}
+  try{
+    const d=S.store.vault?await dec(key,S.store.vault):{items:[]};
+    S.items=sanItems(d&&d.items);
+  }catch(e){busy(false,'u-go','잠금 해제');setMsg('u-msg','저장 데이터 복호화 실패. 초기화가 필요할 수 있습니다.','e');return}
+  rstFail();S.key=key;busy(false,'u-go','잠금 해제');enter();
+}
+
+function busy(on,id,txt){S.busy=on;$(id).disabled=on;$(id).textContent=txt}
+
+/* =========== 세션 관리 =========== */
+function enter(){
+  S.unlocked=true;clearInterval(S.lockTm);S.lockTm=null;
+  $('lock').hidden=true;$('app').hidden=false;
+  try{ $('app').inert=false; }catch(e){}
+  renderBanner();renderChips();renderItems();
+  if(!S.tabs.length)newTab();else activateTab(S.act||S.tabs[0]);
+  markAct();startIdle();
+  if(!cur())$('addr-in').focus();
+}
+
+function lock(){
+  document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+  // 탭·사이트는 닫지 않고 그대로 둔다. 화면만 오버레이로 가린다.
+  // (음악 재생, 디스코드 연결, 다운로드 등이 잠금 중에도 계속 유지됨)
+  clr(['it-name','it-url']);
+  $('chk-rpt').hidden=true;$('chk-rpt').textContent='';
+  // 복호화된 즐겨찾기만 메모리·대시보드에서 비운다(가려진 상태에서 노출 방지). 열린 탭은 유지.
+  S.items=[];S.key=null;S.unlocked=false;
+  while($('sc-tiles').firstChild)$('sc-tiles').removeChild($('sc-tiles').firstChild);
+  while($('bm-list').firstChild)$('bm-list').removeChild($('bm-list').firstChild);
+  stopIdle();hideToast();showLock('unlock');
+}
+
+/* ---- 자동 잠금 ---- */
+function markAct(){S.lastAct=Date.now()}
+function ckIdle(){if(!S.unlocked||!S.store.set.idle)return;if(Date.now()-S.lastAct>=S.store.set.idle*60000)lock()}
+function startIdle(){stopIdle();S.idleTm=setInterval(ckIdle,IDLE_CK)}
+function stopIdle(){clearInterval(S.idleTm);S.idleTm=null}
+
+/* =========== URL 검증 =========== */
+const BAD_SCHEME=/^(javascript|data|vbscript|file|blob|about|chrome|chrome-extension|chrome-untrusted|edge|filesystem|view-source|intent|ws|wss|ftp|mailto|tel|sms)\s*:/i;
+
+function looksLikeUrl(s){
+  if(/^[a-z][a-z0-9+.-]*:\/\//i.test(s))return true;
+  if(/^\/\//.test(s))return true;
+  if(/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z]{2,})/i.test(s))return true;
+  if(/^localhost(:|\/|$)/.test(s))return true;
+  return false;
+}
+
+function normUrl(raw){
+  let t=String(raw||'').trim();
+  if(!t)return{err:'주소를 입력하세요.'};
+  if(t.length>MAX_URL)return{err:'주소가 너무 깁니다.'};
+  if(BAD_SCHEME.test(t))return{err:'지원하지 않는 프로토콜입니다. https:// 주소를 입력하세요.'};
+  let note='';
+  if(!looksLikeUrl(t)){
+    return{url:'https://html.duckduckgo.com/html/?q='+encodeURIComponent(t),note:'DuckDuckGo 검색: '+t};
+  }
+  if(/^[a-z][a-z0-9+.-]*:\/\//i.test(t)){/* ok */}
+  else if(/^\/\//.test(t))t='https:'+t;
+  else{
+    const m=/^([a-z][a-z0-9+.-]*):(.*)$/i.exec(t);
+    if(m&&!m[1].includes('.')&&!/^\d/.test(m[2])&&m[1].toLowerCase()!=='localhost')return{err:'지원하지 않는 프로토콜입니다.'};
+    t='https://'+t;
+  }
+  let u;try{u=new URL(t)}catch(e){return{url:'https://html.duckduckgo.com/html/?q='+encodeURIComponent(raw.trim()),note:'DuckDuckGo 검색: '+raw.trim()}}
+  if(u.protocol==='http:'){u.protocol='https:';note='HTTP→HTTPS로 변환했습니다.'}
+  else if(u.protocol!=='https:')return{err:'https:// 주소만 사용할 수 있습니다.'};
+  if(u.username||u.password)return{err:'사용자 인증이 포함된 주소는 사용할 수 없습니다.'};
+  const h=u.hostname;
+  if(!h.startsWith('[')&&!h.endsWith(']')){
+    if(!/^[a-z0-9.-]+$/.test(h))return{url:'https://html.duckduckgo.com/html/?q='+encodeURIComponent(raw.trim()),note:'DuckDuckGo 검색: '+raw.trim()};
+    const l=h.split('.');
+    if(h!=='localhost'&&l.length<2)return{url:'https://html.duckduckgo.com/html/?q='+encodeURIComponent(raw.trim()),note:'DuckDuckGo 검색: '+raw.trim()};
+    if(l.some(x=>!x||x.length>63||x.startsWith('-')||x.endsWith('-')))return{url:'https://html.duckduckgo.com/html/?q='+encodeURIComponent(raw.trim()),note:'DuckDuckGo 검색: '+raw.trim()};
+  }
+  if((location.protocol==='https:'||location.protocol==='http:')&&u.origin===location.origin)return{err:'Geo-Zebra 자체 주소는 열 수 없습니다.'};
+  return{url:u.href,note};
+}
+
+function hostOf(url){try{return new URL(url).hostname}catch(e){return''}}
+
+function isBlocker(url){
+  let u;try{u=new URL(url)}catch(e){return false}
+  const h=u.hostname;
+  return BLOCKERS.some(d=>h===d||h.endsWith('.'+d));
+}
+
+
+/* =========== 프록시 (Ultraviolet) =========== */
+const PX_PREFIX='/service/';
+function xorEnc(s){let t='';for(let i=0;i<s.length;i++)t+=i%2?String.fromCharCode(s.charCodeAt(i)^2):s[i];return encodeURIComponent(t)}
+function xorDec(s){
+  let d;try{d=decodeURIComponent(s)}catch(e){return null}
+  let t='';for(let i=0;i<d.length;i++)t+=i%2?String.fromCharCode(d.charCodeAt(i)^2):d[i];return t;
+}
+// public/uv/uv.config.js의 코덱과 같은 규칙: 출처만 인코딩, 경로·쿼리는 그대로.
+function pxEnc(url){const u=new URL(url);return PX_PREFIX+xorEnc(u.origin)+u.pathname+u.search+u.hash}
+function pxDec(rest){
+  const i=rest.indexOf('/');if(i<0)return xorDec(rest);
+  const o=xorDec(rest.slice(0,i));return o===null?null:o+rest.slice(i);
+}
+
+let pxP=null;
+function pxReady(){
+  if(!pxP)pxP=(async()=>{
+    if(!('serviceWorker' in navigator)||!window.isSecureContext)throw new Error('이 환경에서는 서비스 워커를 쓸 수 없어 프록시를 시작할 수 없습니다. HTTPS 주소로 열어 주세요.');
+    if(!window.BareMux||!window.SharedWorker)throw new Error('프록시 전송 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도하세요.');
+    const reg=await navigator.serviceWorker.register('/uv-sw.js',{scope:PX_PREFIX});
+    if(!reg.active){
+      const w=reg.installing||reg.waiting;
+      await new Promise((res,rej)=>{w.addEventListener('statechange',()=>{if(w.state==='activated')res();else if(w.state==='redundant')rej(new Error('프록시 서비스 워커 설치에 실패했습니다.'))})});
+    }
+    const wisp=(location.protocol==='https:'?'wss://':'ws://')+location.host+'/wisp/';
+    await new BareMux.BareMuxConnection('/baremux/worker.js').setTransport('/epoxy/index.mjs',[{wisp}]);
+  })().catch(e=>{pxP=null;throw e});
+  return pxP;
+}
+
+// 프록시된 사이트가 이 출처에 남긴 데이터(사이트 주소가 키에 포함됨)를 지운다. 앱 데이터(qs*)는 유지.
+// "사이트 로그인 유지"가 켜져 있으면 쿠키 저장소(__op)만 남긴다.
+async function purgeSiteData(){
+  const keepCookies=!!(S.store&&S.store.set.keepLogin);
+  for(const name of ['localStorage','sessionStorage']){
+    try{const st=window[name],ks=[];for(let i=0;i<st.length;i++){const k=st.key(i);if(k&&!k.startsWith('qs')&&k!=='bare-mux-path')ks.push(k)}ks.forEach(k=>st.removeItem(k))}catch(e){}
+  }
+  try{
+    const dbs=await indexedDB.databases();
+    for(const d of dbs){
+      if(!d.name)continue;
+      if(d.name==='__op'){if(!keepCookies)await clearIdbStores(d.name)}
+      else indexedDB.deleteDatabase(d.name);
+    }
+  }catch(e){}
+  try{const n=await caches.keys();await Promise.all(n.filter(x=>!x.startsWith('qs-')).map(x=>caches.delete(x)))}catch(e){}
+}
+// __op는 프록시 서비스 워커가 열어 두므로 삭제하면 막힐 수 있어 내용만 비운다.
+function clearIdbStores(name){
+  return new Promise(res=>{
+    const r=indexedDB.open(name);
+    r.onupgradeneeded=()=>r.transaction.abort(); // 없는 DB를 빈 채로 만들지 않는다
+    r.onerror=r.onblocked=()=>res();
+    r.onsuccess=()=>{
+      const db=r.result,names=[...db.objectStoreNames];
+      if(!names.length){db.close();return res()}
+      const tx=db.transaction(names,'readwrite');names.forEach(n=>tx.objectStore(n).clear());
+      tx.oncomplete=tx.onerror=tx.onabort=()=>{db.close();res()};
+    };
+  });
+}
+
+/* =========== 에이전트 모드 (WebSocket 기반 서버사이드 렌더링) =========== */
+const Agent = {
+  ws: null,
+  connected: false,
+  serverIp: null,       // DNS 차단 시 재연결용 캐시된 IP
+  pending: new Map(),   // id → {resolve, reject}
+  hbTimer: null,
+  reconnTimer: null,
+  reconnDelay: 1000,
+  maxReconnDelay: 30000,
+  mode: 'proxy',        // 'proxy' | 'agent' — 현재 활성 모드
+
+  // 에이전트 WebSocket 연결
+  connect() {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // DNS 차단 시 캐시된 IP로 연결 시도
+    const host = this.serverIp || location.host;
+    const url = proto + '//' + host + '/agent/';
+
+    try {
+      this.ws = new WebSocket(url);
+    } catch (e) {
+      this.scheduleReconnect();
+      return;
+    }
+
+    this.ws.onopen = () => {
+      this.connected = true;
+      this.reconnDelay = 1000;
+      this.updateStatus('connected');
+      this.startHeartbeat();
+      // 서버 IP 캐싱 요청 (DNS 차단 대비)
+      this.send({ type: 'resolve', hostname: location.hostname });
+    };
+
+    this.ws.onmessage = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch { return; }
+
+      if (msg.type === 'pong') { this.lastPong = Date.now(); return; }
+
+      if (msg.type === 'connected') {
+        console.log('[Agent] Connected v' + msg.version);
+        return;
+      }
+
+      if (msg.type === 'resolved' && msg.ip) {
+        this.serverIp = msg.ip;
+        // localStorage에 캐시 (DNS 차단 후에도 사용 가능)
+        try { localStorage.setItem('qs:agent-ip', msg.ip); } catch {}
+        console.log('[Agent] Server IP cached:', msg.ip);
+        return;
+      }
+
+      // 'loading'은 아직 결과가 아니므로 pending에서 삭제하지 않는다.
+      if (msg.type === 'loading') return;
+
+      // navigate 응답 처리
+      const id = msg.id;
+      if (id && this.pending.has(id)) {
+        const { resolve, reject } = this.pending.get(id);
+        this.pending.delete(id);
+        if (msg.type === 'page') resolve(msg);
+        else if (msg.type === 'error') reject(new Error(msg.message || '서버 처리 실패'));
+      }
+    };
+
+    this.ws.onclose = () => {
+      this.connected = false;
+      this.stopHeartbeat();
+      this.updateStatus('disconnected');
+      // 아직 응답을 기다리는 요청들을 모두 거부해 무한 로딩을 막는다.
+      for (const { reject } of this.pending.values()) {
+        try { reject(new Error('에이전트 연결이 끊겼습니다. 다시 시도하세요.')); } catch {}
+      }
+      this.pending.clear();
+      this.scheduleReconnect();
+    };
+
+    this.ws.onerror = () => {
+      // onclose가 이어서 호출됨
+    };
+  },
+
+  send(obj) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(obj));
+    }
+  },
+
+  startHeartbeat() {
+    this.stopHeartbeat();
+    this.lastPong = Date.now();
+    this.hbTimer = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        // 지난 두 번의 핑(약 20초) 동안 pong이 없으면 좀비 연결로 보고 강제로 끊어 재연결한다.
+        // 느린 망·프록시가 WebSocket을 조용히 끊어도 브라우저 onclose가 안 뜨는 경우를 대비.
+        if (Date.now() - this.lastPong > 45000) {
+          try { this.ws.close(); } catch {}
+          return;
+        }
+        this.send({ type: 'ping' });
+      }
+    }, 20000); // 20초마다 핑
+  },
+
+  stopHeartbeat() {
+    if (this.hbTimer) { clearInterval(this.hbTimer); this.hbTimer = null; }
+  },
+
+  scheduleReconnect() {
+    if (this.reconnTimer) return;
+    this.reconnTimer = setTimeout(() => {
+      this.reconnTimer = null;
+      // 캐시된 IP 복원
+      if (!this.serverIp) {
+        try { this.serverIp = localStorage.getItem('qs:agent-ip'); } catch {}
+      }
+      this.connect();
+    }, this.reconnDelay);
+    this.reconnDelay = Math.min(this.reconnDelay * 1.5, this.maxReconnDelay);
+  },
+
+  // 에이전트를 통해 페이지 가져오기
+  navigate(url) {
+    return new Promise((resolve, reject) => {
+      if (!this.connected) {
+        reject(new Error('에이전트에 연결되어 있지 않습니다.'));
+        return;
+      }
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      this.pending.set(id, { resolve, reject });
+      this.send({ type: 'navigate', id, url });
+      // 35초 타임아웃 — 서버 데드라인(20초) + 큰 응답 전송 시간 여유.
+      setTimeout(() => {
+        if (this.pending.has(id)) {
+          this.pending.delete(id);
+          reject(new Error('에이전트 응답 시간 초과 — 서버가 응답했지만 전송이 느리거나 연결이 불안정할 수 있습니다. 프록시 모드를 사용해 보세요.'));
+        }
+      }, 35000);
+    });
+  },
+
+  updateStatus(state) {
+    const el = $('conn-status');
+    if (!el) return;
+    if (state === 'connected') {
+      el.className = 'chip chip-ok';
+      el.textContent = this.mode === 'agent' ? '● 에이전트' : '● 연결됨';
+      el.title = '에이전트 WebSocket 연결됨' + (this.serverIp ? ' (IP: ' + this.serverIp + ')' : '');
+    } else {
+      el.className = 'chip chip-w';
+      el.textContent = '○ 재연결 중';
+      el.title = '에이전트 연결 끊김 — 자동 재연결 시도 중';
+    }
+  },
+
+  destroy() {
+    this.stopHeartbeat();
+    if (this.reconnTimer) { clearTimeout(this.reconnTimer); this.reconnTimer = null; }
+    if (this.ws) { this.ws.close(); this.ws = null; }
+    this.connected = false;
+    for (const { reject } of this.pending.values()) {
+      try { reject(new Error('에이전트가 종료되었습니다.')); } catch {}
+    }
+    this.pending.clear();
+  }
+};
+
+/* =========== 탭 =========== */
+// 탭마다 주소·뒤로 가기 목록·iframe·로딩 화면·타이머를 따로 갖는다. 탭 목록은 메모리에만 있다.
+const MAX_TABS=10;
+function cur(){return S.act?S.act.curUrl:null}
+function isAct(t){return t===S.act}
+
+function newTab(url,{activate=true,after=false}={}){
+  if(S.tabs.length>=MAX_TABS){toast('탭은 최대 '+MAX_TABS+'개까지 열 수 있습니다.');return null}
+  const pane=document.createElement('div');pane.className='tabpane';pane.hidden=true;
+  const ld=document.createElement('div');ld.className='v-load';ld.setAttribute('role','status');ld.setAttribute('aria-live','polite');ld.hidden=true;
+  pane.appendChild(ld);$('fwrap').appendChild(pane);
+  const t={id:++S.tabSeq,pane,ld,frame:null,curUrl:null,loadUrl:null,hist:[],histIdx:-1,retries:0,frameTm:null,syncTm:null,title:'',loading:false,zoom:1};
+  const at=after&&S.act&&S.tabs.includes(S.act)?S.tabs.indexOf(S.act)+1:S.tabs.length;
+  S.tabs.splice(at,0,t);
+  if(activate)activateTab(t);else renderTabs();
+  if(url)openIn(t,url);
+  return t;
+}
+
+// Agent 모드로 열면 거의 확실히 깨지는 사이트. 영상 스트리밍은 agent.js가 스크립트를 제거해서 불가.
+const WISP_ONLY=/^(?:[^.]+\.)*(youtube\.com|youtu\.be|chzzk\.naver\.com|sooplive\.co\.kr|afreecatv\.com|twitch\.tv|netflix\.com|disneyplus\.com|tving\.com|wavve\.com|coupangplay\.com|watcha\.com|discord\.com|discord\.gg|meet\.google\.com|zoom\.us|whereby\.com)$/i;
+function wispOnly(url){try{return WISP_ONLY.test(new URL(url).hostname)}catch(e){return false}}
+
+// 상단바 모드 칩 — 클릭하면 현재 탭을 반대 모드로 다시 연다. 영상 사이트는 Agent 모드 자체를 거부.
+function renderModeChip(){
+  const el=$('conn-status');if(!el)return;
+  const isAg=Agent.mode==='agent';
+  el.textContent=(Agent.connected?'● ':'○ ')+(isAg?'에이전트':'프록시');
+  el.className='chip '+(Agent.connected?(isAg?'chip-w':'chip-ok'):'chip-w');
+  const u=cur();
+  const tipLines=[isAg?'에이전트 모드: 서버가 페이지를 가져와 보여줍니다. JS 안 돌아감, 영상·로그인·실시간 사이트 불가.':'프록시 모드: 사이트가 iframe 안에서 그대로 실행됩니다. 영상·로그인 가능.',
+    Agent.connected?'에이전트 WebSocket: 연결됨 — DNS 차단되어도 유지됩니다.':'에이전트 WebSocket: 끊김 — 재연결 시도 중.',
+    u?('클릭하면 '+(isAg?'프록시':'에이전트')+' 모드로 이 페이지를 다시 엽니다.'):'클릭하면 다음 페이지부터 반대 모드로 열립니다.'];
+  el.title=tipLines.join('\n');
+}
+function toggleMode(){
+  if(Agent.mode==='agent'){Agent.mode='proxy';toast('프록시 모드 — 사이트가 그대로 실행됩니다.')}
+  else{
+    if(!Agent.connected){toast('에이전트 WebSocket이 연결되어 있지 않아 전환할 수 없습니다.');return}
+    Agent.mode='agent';toast('에이전트 모드 — 서버가 가져와 보여줍니다. 영상·로그인 불가.')
+  }
+  renderModeChip();
+  const t=S.act,u=t&&t.curUrl;
+  if(u)openIn(t,u); // 현재 탭을 반대 모드로 다시 로드
+}
+
+function openIn(t,url){
+  // 영상·실시간 사이트는 Agent 모드 토글 상태와 무관하게 항상 Wisp 프록시로 (문서 한계 §2)
+  if(Agent.mode==='agent'&&Agent.connected&&!wispOnly(url))openViewerAgent(url,false,t);
+  else openViewer(url,false,t);
+}
+
+function activateTab(t){
+  S.act=t;
+  S.tabs.forEach(x=>{x.pane.hidden=x!==t});
+  setMsg('addr-msg','');closeZoomMenu();
+  showView();updNav();renderTabs();applyZoom(t);
+}
+
+// 현재 탭에 사이트가 있으면 뷰어, 없으면(새 탭) 대시보드를 보여 준다.
+function showView(){
+  const u=cur();
+  $('viewer').hidden=!u;$('dash').hidden=!!u;
+  $('addr-form').classList.toggle('vw',!!u);
+  if(document.activeElement!==$('addr-in'))$('addr-in').value=u||'';
+}
+
+function closeTab(t){
+  const i=S.tabs.indexOf(t);if(i<0)return;
+  killFrame(t);t.pane.remove();S.tabs.splice(i,1);
+  if(!S.tabs.length)newTab();
+  else if(t===S.act)activateTab(S.tabs[Math.min(i,S.tabs.length-1)]);
+  else renderTabs();
+  if(!S.tabs.some(x=>x.curUrl))purgeSiteData();
+}
+
+// 현재 탭을 새 탭 화면(대시보드)으로 되돌린다.
+function goHome(){
+  const t=S.act;if(!t)return;
+  killFrame(t);t.curUrl=null;t.loadUrl=null;t.hist=[];t.histIdx=-1;t.title='';t.loading=false;t.ld.hidden=true;
+  $('addr-in').value='';activateTab(t);
+  if(!S.tabs.some(x=>x.curUrl))purgeSiteData();
+}
+
+function closeAllTabs(){
+  S.tabs.forEach(t=>{killFrame(t);t.pane.remove()});
+  S.tabs=[];S.act=null;
+  $('addr-in').value='';
+  newTab();
+  purgeSiteData();
+}
+
+function switchTab(d){
+  if(S.tabs.length<2)return;
+  const i=S.tabs.indexOf(S.act);
+  activateTab(S.tabs[(i+d+S.tabs.length)%S.tabs.length]);
+}
+
+function svgIcon(id){
+  const s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('class','ic');s.setAttribute('aria-hidden','true');
+  const u=document.createElementNS('http://www.w3.org/2000/svg','use');u.setAttribute('href','#'+id);s.appendChild(u);return s;
+}
+
+function renderTabs(){
+  const bar=$('tabbar');
+  const hadFocus=bar.contains(document.activeElement);
+  while(bar.firstChild)bar.removeChild(bar.firstChild);
+  bar.classList.toggle('many',S.tabs.length>6);
+  S.tabs.forEach(t=>{
+    const label=t.curUrl?(t.title||hostOf(t.curUrl)):'새 탭';
+    const el=document.createElement('div');el.className='tab'+(t.loading?' ld':'');
+    el.setAttribute('role','tab');el.tabIndex=t===S.act?0:-1;el.setAttribute('aria-selected',t===S.act?'true':'false');
+    el.title=t.curUrl?label+'\n'+t.curUrl:'새 탭';
+    let ic;
+    if(t.curUrl){ic=document.createElement('span');ic.textContent=(Array.from(hostOf(t.curUrl).replace(/^www\./,''))[0]||'?').toUpperCase()}
+    else ic=svgIcon('i-home');
+    ic.classList.add('tab-ic');
+    const tt=document.createElement('span');tt.className='tab-tt';tt.textContent=label;
+    const x=document.createElement('button');x.type='button';x.className='tab-x';x.title='탭 닫기 (Alt+W)';x.setAttribute('aria-label',label+' 탭 닫기');
+    x.appendChild(svgIcon('i-x'));
+    x.addEventListener('click',ev=>{ev.stopPropagation();closeTab(t)});
+    el.addEventListener('click',()=>{if(t!==S.act)activateTab(t)});
+    el.addEventListener('auxclick',ev=>{if(ev.button===1){ev.preventDefault();closeTab(t)}});
+    el.addEventListener('keydown',ev=>{
+      if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();activateTab(t)}
+      else if(ev.key==='ArrowRight'||ev.key==='ArrowLeft'){ev.preventDefault();switchTab(ev.key==='ArrowRight'?1:-1)}
+      else if(ev.key==='Delete'){ev.preventDefault();closeTab(t)}
+    });
+    el.append(ic,tt,x);bar.appendChild(el);
+  });
+  const a=bar.querySelector('[aria-selected="true"]');
+  if(a){a.scrollIntoView({block:'nearest',inline:'nearest'});if(hadFocus)a.focus()}
+}
+
+// 에이전트 모드로 페이지 표시 (srcdoc 또는 blob URL 사용)
+async function openViewerAgent(url, skipHist, t = S.act) {
+  if (!t) return;
+  // 영상·실시간 사이트는 agent.js가 스크립트를 제거해서 재생 불가. 사용자가 재시도 버튼을 눌러도 자동으로 Wisp로 돌린다.
+  if (wispOnly(url)) { openViewer(url, skipHist, t); return; }
+  killFrame(t);
+  t.curUrl = url;
+  t.loadUrl = null;
+  t.title = '';
+  Agent.mode = 'agent';
+  renderModeChip();
+
+  if (!skipHist) {
+    t.hist.length = t.histIdx + 1;
+    t.hist.push(url);
+    t.histIdx = t.hist.length - 1;
+  }
+  if (isAct(t)) {
+    updNav();
+    showView();
+    $('addr-in').value = url;
+    setMsg('addr-msg', '');
+  }
+  resetLoader(t, '에이전트가 페이지를 가져오는 중…');
+  renderTabs();
+
+  // 연결이 안 된 상태면 재연결을 유도하고 안내한다. navigate가 즉시 reject하도록 되어 있지만,
+  // 명시적인 안내가 더 친절하다.
+  if (!Agent.connected) {
+    Agent.connect();
+    showAgentError(t, url, '에이전트 WebSocket에 연결되어 있지 않습니다. 다시 시도하거나 프록시 모드로 열어 보세요.');
+    return;
+  }
+
+  try {
+    const result = await Agent.navigate(url);
+    if (t.curUrl !== url || !S.tabs.includes(t)) return; // 사용자가 다른 페이지로 이동했거나 탭을 닫음
+
+    // blob URL로 iframe에 표시
+    const blob = new Blob([result.html], { type: 'text/html;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+
+    if (t.frame) { t.frame.remove(); t.frame = null; }
+
+    const f = document.createElement('iframe');
+    f.title = (result.title || hostOf(url)) + ' (에이전트 모드)';
+    f.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    f.setAttribute('referrerpolicy', 'no-referrer');
+
+    // 에이전트 응답의 본문이 비어 보이면(SPA 추정) 사용자에게 알린다. jsdom은 JS를 실행하지 않음.
+    const looksEmpty=/<body[^>]*>\s*(<[^>]+>\s*)*<\/body>/i.test(result.html)||result.html.length<500;
+    const isLite = !!result.lite; // CSS/이미지 인라인 건너뛴 라이트 모드
+
+    f.addEventListener('load', () => {
+      t.ld.hidden = true;
+      t.loading = false;
+      renderTabs();
+      URL.revokeObjectURL(blobUrl);
+      // 에이전트 렌더링된 페이지 내 링크 클릭을 가로채기 + 상단 안내 띠 삽입
+      try {
+        const doc = f.contentDocument;
+        if (doc) {
+          injectAgentNotice(doc, t, url, looksEmpty, isLite);
+          doc.addEventListener('click', (ev) => {
+            const a = ev.target.closest('a[href]');
+            if (!a) return;
+            const href = a.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('data:')) return;
+            ev.preventDefault();
+            // 절대 URL로 변환
+            let abs;
+            try { abs = new URL(href, url).href; } catch { return; }
+            if (abs.startsWith('http://') || abs.startsWith('https://')) {
+              navTo(abs, t);
+            }
+          }, true);
+        }
+      } catch (e) { /* cross-origin */ }
+    }, { once: true });
+
+    f.src = blobUrl;
+    t.pane.appendChild(f);
+    t.frame = f;
+    t.title = result.title || '';
+    applyZoom(t);
+
+    // 주소바 업데이트
+    if (result.url && result.url !== url) {
+      t.curUrl = result.url;
+      if (isAct(t)) $('addr-in').value = result.url;
+    }
+    renderTabs();
+
+  } catch (err) {
+    if (t.curUrl !== url) return;
+    showAgentError(t, url, err.message);
+  }
+}
+
+// 에이전트 렌더링 결과 iframe의 맨 위에 안내 띠를 추가한다. (iframe은 same-origin이라 DOM 수정 가능)
+function injectAgentNotice(doc, t, url, looksEmpty, isLite) {
+  if (!doc.body || doc.getElementById('__qsAgentBar')) return;
+  const bar = doc.createElement('div');
+  bar.id = '__qsAgentBar';
+  bar.style.cssText='position:sticky;top:0;left:0;right:0;z-index:2147483647;padding:.4rem .75rem;background:#2a2a3a;color:#fff;font:600 .82rem system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;display:flex;gap:.6rem;align-items:center;border-bottom:1px solid #444';
+  const label=doc.createElement('span');label.style.flex='1';
+  label.textContent=looksEmpty
+    ?'⚡ 에이전트 모드 — 이 사이트는 JS로 그려지는 것 같아 내용이 비어 보일 수 있습니다. 프록시로 열어 보세요.'
+    :isLite
+    ?'⚡ 에이전트 라이트 — 시간 제한으로 CSS/이미지가 안 보일 수 있지만 링크는 동작합니다.'
+    :'⚡ 에이전트 모드 — JS 실행 안 됨, 영상·로그인·버튼 상호작용 불가. 링크만 동작합니다.';
+  const toProxy=doc.createElement('button');
+  toProxy.type='button';toProxy.textContent='프록시로 열기';
+  toProxy.style.cssText='padding:.2rem .55rem;border-radius:6px;border:1px solid #fff;background:#fff;color:#2a2a3a;font-weight:600;cursor:pointer';
+  toProxy.addEventListener('click',()=>{Agent.mode='proxy';renderModeChip();openViewer(url,false,t)});
+  const close=doc.createElement('button');
+  close.type='button';close.textContent='×';close.title='안내 닫기';
+  close.style.cssText='padding:.1rem .4rem;border-radius:6px;border:1px solid #666;background:transparent;color:#fff;cursor:pointer';
+  close.addEventListener('click',()=>bar.remove());
+  bar.append(label,toProxy,close);
+  doc.body.insertBefore(bar, doc.body.firstChild);
+}
+
+function showAgentError(t, url, message) {
+  const wrap = t.ld;
+  while (wrap.firstChild) wrap.removeChild(wrap.firstChild);
+  wrap.hidden = false;
+  t.loading = false;
+  renderTabs();
+
+  const box = document.createElement('div');
+  box.className = 'v-err';
+
+  const h = document.createElement('h3');
+  h.textContent = '에이전트 모드 로드 실패';
+  box.appendChild(h);
+
+  const p = document.createElement('p');
+  p.textContent = message || '알 수 없는 오류';
+  p.style.marginBottom = '.5rem';
+  box.appendChild(p);
+
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.style.gap = '.4rem';
+
+  const retryAgent = document.createElement('button');
+  retryAgent.type = 'button';
+  retryAgent.textContent = '에이전트로 재시도';
+  retryAgent.addEventListener('click', () => openViewerAgent(url, false, t));
+  row.appendChild(retryAgent);
+
+  const retryProxy = document.createElement('button');
+  retryProxy.type = 'button';
+  retryProxy.className = 'btn-p';
+  retryProxy.textContent = '프록시로 시도';
+  retryProxy.addEventListener('click', () => { Agent.mode = 'proxy'; openViewer(url, false, t); });
+  row.appendChild(retryProxy);
+
+  box.appendChild(row);
+  wrap.appendChild(box);
+}
+
+/* =========== 뷰어 (iframe + 재시도) =========== */
+function sbx(){
+  const t=['allow-scripts','allow-same-origin','allow-forms','allow-downloads','allow-modals','allow-presentation'];
+  if(S.store.set.popups)t.push('allow-popups');
+  return t.join(' ');
+}
+
+function killFrame(t){
+  clearTimeout(t.frameTm);t.frameTm=null;clearInterval(t.syncTm);t.syncTm=null;t.retries=0;
+  if(t.frame){t.frame.remove();t.frame=null}
+}
+
+function resetLoader(t,txt){
+  const w=t.ld;while(w.firstChild)w.removeChild(w.firstChild);
+  const box=document.createElement('div'),sp=document.createElement('div'),p=document.createElement('p');
+  sp.className='spin';sp.setAttribute('aria-hidden','true');p.className='v-ltxt';p.style.margin='0';p.textContent=txt;
+  box.append(sp,p);w.appendChild(box);w.hidden=false;
+  t.loading=true;
+}
+
+async function openViewer(url,skipHist,t=S.act){
+  killFrame(t);t.curUrl=url;t.loadUrl=null;t.title='';
+  if(!skipHist){
+    t.hist.length=t.histIdx+1;
+    t.hist.push(url);t.histIdx=t.hist.length-1;
+  }
+  if(isAct(t)){
+    updNav();showView();
+    $('addr-in').value=url;
+    setMsg('addr-msg','');
+  }
+  resetLoader(t,'프록시 준비 중…');renderTabs();
+  try{await pxReady()}catch(e){if(t.curUrl===url)showErrAnalysis(t,e.message);return}
+  if(t.curUrl!==url||!S.tabs.includes(t))return;
+  t.loadUrl=pxEnc(url);
+  attempt(t,t.loadUrl);
+}
+
+function realUrlOf(win){
+  try{const l=win.location;if(l.origin!==location.origin||!l.pathname.startsWith(PX_PREFIX))return null;return pxDec((l.pathname+l.search).slice(PX_PREFIX.length))}catch(e){return null}
+}
+
+// 사이트 코드가 넘긴 주소(상대 주소 또는 이미 프록시 주소일 수 있음)를 원래 http(s) 주소로 바꾼다.
+function toRealUrl(raw,base){
+  let s=String(raw||'');
+  const full=location.origin+PX_PREFIX;
+  if(s.startsWith(full))s=pxDec(s.slice(full.length));
+  else if(s.startsWith(PX_PREFIX))s=pxDec(s.slice(PX_PREFIX.length));
+  try{const u=new URL(s,base||undefined);return u.protocol==='https:'||u.protocol==='http:'?u.href:null}catch(e){return null}
+}
+
+// Chrome처럼 사용자 입력 1번에 팝업(새 탭) 1개만 허용한다. 입력 후 5초가 지나면 무효.
+function takeGesture(win){
+  const g=win.__qsGesture||0;
+  if(!g||Date.now()-g>5000||win.__qsGestureUsed===g)return false;
+  win.__qsGestureUsed=g;return true;
+}
+
+// 팝업은 sandbox로 막혀 있으므로, 새 창(target=_blank, window.open)으로 여는 링크는 Chrome처럼 새 탭에서 연다.
+// 바깥 창(_top/_parent)을 향하는 링크·폼은 같은 프레임 안에서 연다.
+function hookFrame(win){
+  let doc;try{doc=win.document}catch(e){return}
+  if(!doc||doc.__qsHooked||!realUrlOf(win))return;
+  doc.__qsHooked=true;
+  // 사이트 화면 안의 입력도 활동으로 쳐서, 사용 중에 자동 잠금되지 않게 한다.
+  ['pointerdown','keydown','wheel','touchstart'].forEach(t=>doc.addEventListener(t,()=>{if(S.unlocked)markAct()},{passive:true,capture:true}));
+  // 사이트 화면에 포커스가 있어도 앱 단축키(탭·잠금·새로고침 등)가 동작하게 한다.
+  doc.addEventListener('keydown',ev=>{if(handleKey(ev,true)){ev.preventDefault();ev.stopPropagation()}},true);
+  ['pointerdown','keydown'].forEach(t=>doc.addEventListener(t,ev=>{if(ev.isTrusted)win.__qsGesture=Date.now()},true));
+  win.open=function(raw,name){
+    const u=raw?toRealUrl(raw,realUrlOf(win)):null;
+    if(u){
+      const n=String(name||'').toLowerCase();
+      if(n==='_self'||n==='_top'||n==='_parent')win.location.href=pxEnc(u);
+      else if(takeGesture(win))newTab(u,{after:true});
+    }
+    return win;
+  };
+  doc.addEventListener('click',ev=>{
+    const a=ev.target&&ev.target.closest?ev.target.closest('a[href],area[href]'):null;
+    if(!a)return;
+    const tg=(a.getAttribute('target')||'').toLowerCase();
+    const bg=ev.ctrlKey||ev.metaKey,fg=ev.shiftKey;
+    const wantsTab=bg||fg||(tg!==''&&tg!=='_self'&&tg!=='_top'&&tg!=='_parent');
+    if(wantsTab&&takeGesture(win)){
+      const u=toRealUrl(a.href,realUrlOf(win));
+      if(u){ev.preventDefault();ev.stopPropagation();newTab(u,{activate:!bg,after:true});return}
+    }
+    if(tg&&tg!=='_self')a.target='_self';
+  },true);
+  doc.addEventListener('auxclick',ev=>{
+    if(ev.button!==1)return;
+    const a=ev.target&&ev.target.closest?ev.target.closest('a[href],area[href]'):null;
+    if(!a)return;
+    const u=toRealUrl(a.href,realUrlOf(win));
+    if(u&&takeGesture(win)){ev.preventDefault();ev.stopPropagation();newTab(u,{activate:false,after:true})}
+  },true);
+  doc.addEventListener('submit',ev=>{
+    const fm=ev.target;if(fm&&fm.target&&!/^_self$/i.test(fm.target))fm.target='_self';
+  },true);
+  // form.submit()은 submit 이벤트가 없으므로 직접 감싼다(네이버 로그인 폼이 target=_top으로 이렇게 제출함).
+  const FP=win.HTMLFormElement&&win.HTMLFormElement.prototype;
+  if(FP&&!FP.__qsSubmit){
+    const orig=FP.submit;
+    FP.submit=function(){if(this.target&&!/^_self$/i.test(this.target))this.target='_self';return orig.call(this)};
+    FP.__qsSubmit=true;
+  }
+}
+function hookTree(win,depth){
+  hookFrame(win);
+  if(depth>3)return;
+  try{for(let i=0;i<win.frames.length;i++)hookTree(win.frames[i],depth+1)}catch(e){}
+}
+
+// 사이트 안에서 링크로 이동하면 그 탭의 주소·뒤로 가기 목록·탭 제목을 따라 갱신한다.
+function syncAddr(t){
+  const f=t.frame;if(!f)return;
+  let w;try{w=f.contentWindow}catch(e){return}
+  if(!w)return;
+  hookTree(w,0);
+  let changed=false;
+  let ti='';try{ti=((w.document&&w.document.title)||'').trim()}catch(e){}
+  if(ti&&ti!==t.title){t.title=ti;changed=true}
+  const u=realUrlOf(w);
+  if(u&&/^https?:\/\//i.test(u)&&u!==t.curUrl){
+    t.curUrl=u;t.hist.length=t.histIdx+1;t.hist.push(u);t.histIdx=t.hist.length-1;changed=true;
+    if(isAct(t)){updNav();if(document.activeElement!==$('addr-in'))$('addr-in').value=u}
+  }
+  if(changed)renderTabs();
+}
+function updNav(){
+  const t=S.act;
+  $('v-back').disabled=!t||t.histIdx<1;
+  $('v-fwd').disabled=!t||t.histIdx>=t.hist.length-1;
+}
+function goBack(){
+  const t=S.act;if(!t||t.histIdx<1)return;
+  t.histIdx--;openViewer(t.hist[t.histIdx],true,t);
+}
+function goFwd(){
+  const t=S.act;if(!t||t.histIdx>=t.hist.length-1)return;
+  t.histIdx++;openViewer(t.hist[t.histIdx],true,t);
+}
+function doRefresh(){
+  if(cur())openViewer(cur(),true,S.act);
+}
+
+function attempt(t,url){
+  t.retries++;
+  if(t.frame){t.frame.remove();t.frame=null}
+  resetLoader(t,t.retries>1?'불러오는 중… (시도 '+t.retries+'/'+MAX_RETRY+')':'불러오는 중…');
+
+  const f=document.createElement('iframe');
+  f.title=hostOf(t.curUrl)+' 페이지';
+  f.setAttribute('sandbox',sbx());
+  f.setAttribute('referrerpolicy','no-referrer');
+  f.setAttribute('allow','fullscreen; autoplay; encrypted-media; picture-in-picture');
+  f.setAttribute('loading','eager');
+
+  f.addEventListener('load',function onLoad(){
+    clearTimeout(t.frameTm);t.frameTm=null;
+    t.ld.hidden=true;t.loading=false;renderTabs();
+  },{once:true});
+  f.addEventListener('load',()=>syncAddr(t));
+
+  f.src=url;
+  t.pane.appendChild(f);t.frame=f;applyZoom(t);
+  clearInterval(t.syncTm);t.syncTm=setInterval(()=>syncAddr(t),700);
+
+  clearTimeout(t.frameTm);
+  t.frameTm=setTimeout(()=>{
+    if(t.retries<MAX_RETRY){
+      const p=t.ld.querySelector('.v-ltxt');
+      if(p)p.textContent='응답이 늦습니다. 자동 재시도 중… ('+t.retries+'/'+MAX_RETRY+')';
+      setTimeout(()=>{if(t.loadUrl===url&&S.tabs.includes(t))attempt(t,url)},RETRY_DELAY);
+    }else{
+      showErrAnalysis(t);
+    }
+  },FRAME_TO);
+}
+
+function showErrAnalysis(t,cause){
+  clearTimeout(t.frameTm);t.frameTm=null;
+  const wrap=t.ld;
+  while(wrap.firstChild)wrap.removeChild(wrap.firstChild);
+  wrap.hidden=false;
+  t.loading=false;renderTabs();
+
+  const box=document.createElement('div');box.className='v-err';
+
+  const h=document.createElement('h3');
+  h.textContent=cause?'프록시를 시작하지 못했습니다':MAX_RETRY+'회 시도 후 로드 실패 — 오류 분석';
+  box.appendChild(h);
+
+  const reasons=cause?[cause]:[MAX_RETRY+'번 모두 '+(FRAME_TO/1000)+'초 안에 페이지 로드가 끝나지 않았습니다.',
+    'Geo-Zebra 서버(Render)가 잠들어 있었다면 처음 깨어나는 데 30초 이상 걸릴 수 있습니다.',
+    '학교 네트워크가 Geo-Zebra 서버와의 WebSocket(/wisp/) 연결을 막았을 수 있습니다.',
+    '사이트가 Render 서버 IP를 봇으로 보고 차단했을 수 있습니다.'];
+
+  const ul=document.createElement('ul');
+  reasons.forEach(r=>{const li=document.createElement('li');li.textContent=r;ul.appendChild(li)});
+  box.appendChild(ul);
+
+  const row=document.createElement('div');row.className='row';row.style.gap='.4rem';row.style.marginTop='.5rem';
+
+  // 에이전트 모드 전환 버튼 (우선 표시)
+  if(Agent.connected){
+    const agentBtn=document.createElement('button');agentBtn.type='button';agentBtn.className='btn-p';agentBtn.textContent='⚡ 에이전트 모드로 보기';
+    agentBtn.title='서버에서 페이지를 렌더링해서 보여줍니다. 영상은 재생 불가.';
+    agentBtn.addEventListener('click',()=>{if(t.curUrl)openViewerAgent(t.curUrl,false,t)});
+    row.appendChild(agentBtn);
+  }
+
+  const ntb=document.createElement('button');ntb.type='button';ntb.textContent='Chrome 새 탭에서 열기';
+  ntb.addEventListener('click',openNewTab);row.appendChild(ntb);
+
+  const cp=document.createElement('button');cp.type='button';cp.textContent='주소 복사';
+  cp.addEventListener('click',copyUrl);row.appendChild(cp);
+
+  const retry=document.createElement('button');retry.type='button';retry.className='btn-p';retry.textContent='프록시로 재시도';
+  retry.addEventListener('click',()=>{if(t.curUrl)openViewer(t.curUrl,false,t)});row.appendChild(retry);
+
+  box.appendChild(row);
+  wrap.appendChild(box);
+}
+
+function navTo(raw,t=S.act){
+  const r=normUrl(raw);
+  if(r.err){if(isAct(t)){setMsg('addr-msg',r.err,'e');$('addr-in').focus()}return}
+  if(isAct(t)){
+    setMsg('addr-msg',r.note||'',r.note?'w':'');
+    $('addr-in').value=r.url;$('addr-in').blur();
+  }
+  // 에이전트 모드가 활성화되어 있으면 에이전트로, 아니면 프록시로
+  openIn(t,r.url);
+}
+
+// 앱 단축키. 사이트 화면 안(inFrame)에서 눌러도 동작한다. 처리했으면 true.
+/* =========== 확대·축소 =========== */
+const ZOOM_STEPS=[0.25,0.33,0.5,0.67,0.75,0.8,0.9,1,1.1,1.25,1.5,1.75,2,2.5,3];
+function tabZoom(t){return (t&&t.zoom)||1}
+function applyZoom(t){
+  const z=tabZoom(t);
+  if(t.frame)t.frame.style.zoom=String(z);
+  if(isAct(t)){const pct=Math.round(z*100)+'%';$('v-zoom').textContent=pct;$('zm-val').textContent=pct}
+}
+function setZoom(t,z){
+  z=Math.max(0.25,Math.min(3,z));
+  t.zoom=z;applyZoom(t);
+}
+function zoomStep(t,dir){
+  const z=tabZoom(t);
+  // 현재 배율과 가장 가까운 step 다음(또는 이전) 단계로 이동
+  const sorted=ZOOM_STEPS.slice();
+  if(dir>0){const next=sorted.find(s=>s>z+0.001);if(next!=null)setZoom(t,next)}
+  else{const prev=[...sorted].reverse().find(s=>s<z-0.001);if(prev!=null)setZoom(t,prev)}
+}
+function toggleZoomMenu(){
+  const m=$('v-zoom-menu'),btn=$('v-zoom');
+  if(m.classList.contains('show')){m.classList.remove('show');return}
+  const r=btn.getBoundingClientRect();
+  m.style.top=(r.bottom+4)+'px';m.style.left=Math.max(8,Math.min(window.innerWidth-180,r.left-50))+'px';
+  m.classList.add('show');
+}
+function closeZoomMenu(){$('v-zoom-menu').classList.remove('show')}
+
+function handleKey(ev,inFrame){
+  if(!S.unlocked)return false;
+  const alt=ev.altKey&&!ev.ctrlKey&&!ev.metaKey,k=ev.key;
+  const ctrl=(ev.ctrlKey||ev.metaKey)&&!ev.altKey;
+  if(alt&&(k==='l'||k==='L')){lock();return true}
+  if(alt&&(k==='t'||k==='T')){if(newTab())$('addr-in').focus();return true}
+  if(alt&&(k==='w'||k==='W')){if(S.act)closeTab(S.act);return true}
+  if(alt&&k===']'){switchTab(1);return true}
+  if(alt&&k==='['){switchTab(-1);return true}
+  if(alt&&k==='ArrowLeft'){goBack();return true}
+  if(alt&&k==='ArrowRight'){goFwd();return true}
+  if(k==='F5'&&!ev.ctrlKey){doRefresh();return true}
+  // Ctrl+/-/0 확대·축소 (Chrome과 동일 단축키)
+  if(ctrl&&(k==='='||k==='+')){if(S.act)zoomStep(S.act,1);return true}
+  if(ctrl&&k==='-'){if(S.act)zoomStep(S.act,-1);return true}
+  if(ctrl&&k==='0'){if(S.act)setZoom(S.act,1);return true}
+  if(!inFrame&&k==='/'){
+    const tag=(ev.target&&ev.target.tagName)||'';
+    if(tag!=='INPUT'&&tag!=='TEXTAREA'&&tag!=='SELECT'&&!document.querySelector('dialog[open]')){$('addr-in').focus();$('addr-in').select();return true}
+  }
+  return false;
+}
+
+async function openNewTab(){
+  const u=cur();if(!u)return;
+  const ok=await confirm({title:'Chrome 새 탭에서 열기',
+    msg:hostOf(u)+' 을(를) Chrome의 새 탭에서 엽니다.\n\nChrome 새 탭은 일반 탐색이므로 Chrome 방문 기록, Google 계정 활동, 학교 관리·네트워크 기록에 남을 수 있습니다.\n\n팁: 시크릿 모드(Ctrl+Shift+N)를 사용하면 Chrome 기록에 남지 않습니다.',
+    ok:'Chrome 새 탭에서 열기'});
+  if(ok)window.open(u,'_blank','noopener,noreferrer');
+}
+
+async function copyUrl(){
+  const u=cur();if(!u)return;
+  try{await navigator.clipboard.writeText(u);toast('주소를 클립보드에 복사했습니다.')}
+  catch(e){toast('복사할 수 없습니다. 주소 입력창에서 직접 복사하세요.')}
+}
+
+/* =========== 바로가기 / 즐겨찾기 =========== */
+function sanItems(list){
+  if(!Array.isArray(list))return[];const out=[];
+  for(const it of list){
+    if(!it||typeof it!=='object')continue;
+    const k=it.kind==='shortcut'?'shortcut':'bookmark';
+    const t=typeof it.title==='string'?it.title.slice(0,60):'';
+    const r=normUrl(it.url);if(r.err||!t)continue;
+    out.push({id:typeof it.id==='string'?it.id:uid(),kind:k,title:t,url:r.url});
+    if(out.length>=MAX_ITEMS)break;
+  }return out;
+}
+
+async function persistItems(){
+  if(S.mode!=='secure')return true;if(!S.key)return false;
+  try{S.store.vault=await enc(S.key,{items:S.items});return save()}
+  catch(e){toast('즐겨찾기 저장 실패.');return false}
+}
+
+function renderItems(){
+  const tl=$('sc-tiles'),bl=$('bm-list');
+  while(tl.firstChild)tl.removeChild(tl.firstChild);
+  while(bl.firstChild)bl.removeChild(bl.firstChild);
+  const sc=S.items.filter(i=>i.kind==='shortcut'),bm=S.items.filter(i=>i.kind==='bookmark');
+  sc.forEach(i=>tl.appendChild(mkTile(i)));
+  bm.forEach(i=>bl.appendChild(mkRow(i)));
+  $('sc-empty').hidden=sc.length>0;$('bm-empty').hidden=bm.length>0;
+}
+
+function mkAv(t){const a=document.createElement('span');a.className='av';a.setAttribute('aria-hidden','true');a.textContent=(Array.from(t.trim())[0]||'?').toUpperCase();return a}
+
+function mkTools(it){
+  const d=document.createElement('div');d.className='tls';
+  const e=document.createElement('button');e.type='button';e.textContent='수정';e.setAttribute('aria-label',it.title+' 수정');
+  e.addEventListener('click',()=>openItemDlg(it.kind,it));
+  const del=document.createElement('button');del.type='button';del.textContent='삭제';del.setAttribute('aria-label',it.title+' 삭제');
+  del.addEventListener('click',()=>delItem(it));
+  d.append(e,del);return d;
+}
+
+function mkTile(it){
+  const w=document.createElement('div');w.className='tile';
+  const o=document.createElement('button');o.type='button';o.className='to';o.title=it.url;
+  const t=document.createElement('span');t.className='tt';t.textContent=it.title;
+  const h=document.createElement('span');h.className='th';h.textContent=hostOf(it.url);
+  o.append(mkAv(it.title),t,h);o.addEventListener('click',()=>navTo(it.url));
+  w.append(o,mkTools(it));return w;
+}
+
+function mkRow(it){
+  const li=document.createElement('li');
+  const o=document.createElement('button');o.type='button';o.className='to';o.title=it.url;
+  const m=document.createElement('span');m.className='meta';
+  const t=document.createElement('span');t.className='tt';t.textContent=it.title;
+  const h=document.createElement('span');h.className='th';h.textContent=hostOf(it.url);
+  m.append(t,h);o.append(mkAv(it.title),m);o.addEventListener('click',()=>navTo(it.url));
+  li.append(o,mkTools(it));return li;
+}
+
+function openItemDlg(kind,ex,preUrl){
+  S.editId=ex?ex.id:null;
+  $('it-t').textContent=ex?'항목 수정':(kind==='shortcut'?'바로가기 추가':'즐겨찾기 추가');
+  $('it-name').value=ex?ex.title:(preUrl?hostOf(preUrl):'');
+  $('it-url').value=ex?ex.url:(preUrl||'');
+  document.querySelectorAll('input[name="it-k"]').forEach(r=>{r.checked=r.value===kind});
+  $('it-note').textContent=S.mode==='secure'?'이 항목만 암호화되어 이 기기에 저장됩니다.':'제한 모드: 메모리에만 보관되며 페이지를 닫으면 사라집니다.';
+  setMsg('it-msg','');$('d-item').showModal();$('it-name').focus();
+}
+
+async function saveItem(ev){
+  ev.preventDefault();
+  const t=$('it-name').value.trim();
+  const ki=document.querySelector('input[name="it-k"]:checked');
+  const k=ki&&ki.value==='shortcut'?'shortcut':'bookmark';
+  if(!t){setMsg('it-msg','이름을 입력하세요.','e');$('it-name').focus();return}
+  const r=normUrl($('it-url').value);
+  if(r.err){setMsg('it-msg',r.err,'e');$('it-url').focus();return}
+  if(S.editId){const it=S.items.find(i=>i.id===S.editId);if(it){it.title=t.slice(0,60);it.url=r.url;it.kind=k}}
+  else{
+    if(S.items.length>=MAX_ITEMS){setMsg('it-msg','최대 '+MAX_ITEMS+'개까지 저장 가능합니다.','e');return}
+    S.items.push({id:uid(),kind:k,title:t.slice(0,60),url:r.url});
+  }
+  const ok=await persistItems();renderItems();$('d-item').close();clr(['it-name','it-url']);
+  toast(ok?(S.mode==='secure'?'저장했습니다.':'메모리에만 추가했습니다.'):'저장 실패');
+}
+
+async function delItem(it){
+  const ok=await confirm({title:'삭제',msg:'"'+it.title+'" 항목을 삭제할까요?',ok:'삭제'});
+  if(!ok||!S.unlocked)return;
+  S.items=S.items.filter(i=>i.id!==it.id);await persistItems();renderItems();toast('삭제했습니다.');
+}
+
+/* =========== 설정 =========== */
+function applyTheme(){
+  let t=S.store.set.theme;
+  if(t==='system')t=matchMedia('(prefers-color-scheme:light)').matches?'light':'dark';
+  document.documentElement.setAttribute('data-theme',t);
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(m)m.setAttribute('content',t==='light'?'#f5f7fb':'#0f1219');
+}
+
+function openSet(){
+  const s=S.store.set;
+  $('s-theme').value=s.theme;$('s-idle').value=String(s.idle);
+  $('s-hide').checked=s.lockHide;$('s-pop').checked=s.popups;$('s-keep').checked=s.keepLogin;
+  $('s-idle').disabled=S.mode!=='secure';$('s-hide').disabled=S.mode!=='secure';
+  $('chk-rpt').hidden=true;$('d-set').showModal();
+}
+
+function saveSet(){
+  const s=S.store.set;
+  s.theme=['dark','light','system'].includes($('s-theme').value)?$('s-theme').value:'dark';
+  const al=parseInt($('s-idle').value,10);s.idle=IDLE_OPTS.includes(al)?al:5;
+  s.lockHide=$('s-hide').checked;s.popups=$('s-pop').checked;s.keepLogin=$('s-keep').checked;
+  save();applyTheme();renderChips();
+}
+
+async function storageCheck(){
+  const lines=[];let found=false;
+  const scan=(label,st)=>{
+    try{
+      if(st.length===0){lines.push(label+': 비어 있음');return}
+      for(let i=0;i<st.length;i++){
+        const k=st.key(i),v=st.getItem(k)||'';
+        const has=/https?:\/\//i.test(v);if(has)found=true;
+        lines.push(label+': "'+k+'" ('+v.length+'자)'+(has?' ⚠ 평문 URL 포함':' — 평문 URL 없음'));
+      }
+    }catch(e){lines.push(label+': 접근 불가')}
+  };
+  scan('localStorage',localStorage);scan('sessionStorage',sessionStorage);
+  try{if(indexedDB&&typeof indexedDB.databases==='function'){const d=await indexedDB.databases();lines.push('IndexedDB: '+(d.length?d.map(x=>x.name).join(', '):'없음'))}}catch(e){lines.push('IndexedDB: 확인 불가')}
+  try{if('caches' in window){const n=await caches.keys();lines.push('Cache Storage: '+(n.length?n.join(', ')+' (앱 파일만)':'없음'))}}catch(e){lines.push('Cache Storage: 확인 불가')}
+  lines.push('');
+  lines.push(found?'결과: 평문 URL이 발견되었습니다.':'결과: 평문 URL 없음. 즐겨찾기는 암호문으로만 저장됩니다.');
+  lines.push('참고: 이 점검은 이 사이트 출처의 저장소만 확인합니다. Chrome 방문 기록은 볼 수 없습니다.');
+  $('chk-rpt').textContent=lines.join('\n');$('chk-rpt').hidden=false;
+}
+
+async function resetAll(){
+  const ok=await confirm({title:'모든 데이터 초기화',
+    msg:'바로가기·즐겨찾기, 앱 설정, 오프라인 캐시가 이 기기에서 삭제됩니다. 되돌릴 수 없습니다.\n\nPIN은 고정이라 초기화 후에도 같은 PIN으로만 열 수 있습니다.\n(Chrome 방문 기록이나 Google 계정 활동은 삭제되지 않습니다.)',
+    ok:'초기화',req:'초기화'});
+  if(!ok)return;
+  closeAllTabs();S.items=[];S.key=null;
+  await clearAll();location.reload();
+}
+
+/* =========== 상태 표시 =========== */
+function renderChips(){
+  const b=$('st-chips');while(b.firstChild)b.removeChild(b.firstChild);
+  const add=(t,k)=>{const c=document.createElement('span');c.className='chip'+(k?' chip-'+k:'');c.textContent=t;b.appendChild(c)};
+  add(hasCrypto()?'Web Crypto 사용 가능':'Web Crypto 사용 불가',hasCrypto()?'ok':'w');
+  add('PIN 잠금 켜짐','ok');
+  if(S.store.set.idle)add('자동 잠금 '+S.store.set.idle+'분','ok');else add('자동 잠금 꺼짐','w');
+  add('방문 기록 자동 저장 안 함','ok');
+  add(S.swOk?'오프라인 사용 가능':'오프라인 비활성',S.swOk?'ok':'');
+}
+
+function renderBanner(){
+  const b=$('lim-ban');
+  if(S.mode==='secure'){b.hidden=true;return}
+  b.hidden=false;b.textContent='보안 기능 제한: '+S.reasons.join(' ')+' 즐겨찾기와 설정이 저장되지 않고 이 페이지를 닫으면 사라집니다.';
+}
+
+/* =========== UI 도우미 =========== */
+function setMsg(id,txt,k){const e=$(id);e.textContent=txt||'';e.className='msg'+(k==='e'?' msg-e':k==='ok'?' msg-ok':k==='w'?' msg-w':'')}
+function clr(ids){ids.forEach(id=>{const e=$(id);if(e)e.value=''})}
+
+function toast(txt){
+  const t=$('toast');t.textContent=txt;t.hidden=false;
+  clearTimeout(S.toastTm);S.toastTm=setTimeout(hideToast,2800);
+}
+function hideToast(){clearTimeout(S.toastTm);S.toastTm=null;$('toast').hidden=true;$('toast').textContent=''}
+
+function confirm({title,msg,ok:okLabel,req}){
+  return new Promise(resolve=>{
+    const d=$('d-cfm');if(d.open)d.close('cancel');
+    $('cfm-t').textContent=title;$('cfm-body').textContent=msg;
+    $('cfm-ok').textContent=okLabel||'확인';$('cfm-ok').className=req?'btn-d':'btn-p';
+    $('cfm-tw').hidden=!req;$('cfm-ti').value='';
+    $('cfm-tl').textContent=req?'계속하려면 "'+req+'"를 입력하세요.':'';
+    setMsg('cfm-msg','');
+    const fm=$('f-cfm'),no=$('cfm-no');
+    const end=r=>{fm.removeEventListener('submit',onS);no.removeEventListener('click',onN);d.removeEventListener('close',onC);if(d.open)d.close();resolve(r)};
+    const onS=ev=>{ev.preventDefault();if(req&&$('cfm-ti').value.trim()!==req){setMsg('cfm-msg','입력이 일치하지 않습니다.');$('cfm-ti').focus();return}end(true)};
+    const onN=()=>end(false);const onC=()=>end(false);
+    fm.addEventListener('submit',onS);no.addEventListener('click',onN);d.addEventListener('close',onC);
+    d.showModal();(req?$('cfm-ti'):no).focus();
+  });
+}
+
+/* =========== PWA =========== */
+function regSW(){
+  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
+  if(location.protocol!=='https:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')return;
+  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+    .then(()=>navigator.serviceWorker.ready)
+    .then(()=>{S.swOk=true;if(S.unlocked)renderChips()})
+    .catch(()=>{S.swOk=false});
+}
+
+/* =========== 이벤트 =========== */
+function bind(){
+  $('f-unlock').addEventListener('submit',onUnlock);
+  $('forgot-btn').addEventListener('click',resetAll);
+
+  $('addr-form').addEventListener('submit',ev=>{ev.preventDefault();navTo($('addr-in').value)});
+  $('btn-home').addEventListener('click',goHome);
+  $('tab-new').addEventListener('click',()=>{if(newTab())$('addr-in').focus()});
+  $('conn-status').addEventListener('click',toggleMode);
+  // Agent.updateStatus는 수정 금지라, 상태(connected/mode) 변화를 폴링해 칩 UI만 반영한다.
+  let lastKey='';
+  setInterval(()=>{
+    const k=Agent.mode+'/'+Agent.connected+'/'+(cur()||'');
+    if(k!==lastKey){lastKey=k;renderModeChip()}
+  },800);
+  renderModeChip();
+  $('btn-lock').addEventListener('click',lock);
+  $('btn-set').addEventListener('click',openSet);
+
+  $('v-close').addEventListener('click',()=>{if(S.act)closeTab(S.act)});
+  $('v-zoom').addEventListener('click',toggleZoomMenu);
+  $('zm-in').addEventListener('click',()=>{if(S.act)zoomStep(S.act,1)});
+  $('zm-out').addEventListener('click',()=>{if(S.act)zoomStep(S.act,-1)});
+  $('zm-reset').addEventListener('click',()=>{if(S.act)setZoom(S.act,1);closeZoomMenu()});
+  document.addEventListener('click',ev=>{if(!$('v-zoom-menu').contains(ev.target)&&ev.target!==$('v-zoom'))closeZoomMenu()},true);
+  // Ctrl+휠로도 확대·축소 — 일반 브라우저 동작과 동일
+  $('fwrap').addEventListener('wheel',ev=>{if((ev.ctrlKey||ev.metaKey)&&S.act){ev.preventDefault();zoomStep(S.act,ev.deltaY<0?1:-1)}},{passive:false});
+  $('v-back').addEventListener('click',goBack);
+  $('v-fwd').addEventListener('click',goFwd);
+  $('v-ref').addEventListener('click',doRefresh);
+  $('v-save').addEventListener('click',()=>{if(cur())openItemDlg('bookmark',null,cur())});
+  $('v-tab').addEventListener('click',openNewTab);
+  $('add-sc').addEventListener('click',()=>openItemDlg('shortcut'));
+  $('add-bm').addEventListener('click',()=>openItemDlg('bookmark'));
+  $('f-item').addEventListener('submit',saveItem);
+
+  ['s-theme','s-idle','s-hide','s-pop','s-keep'].forEach(id=>$(id).addEventListener('change',saveSet));
+  $('clr-login').addEventListener('click',async()=>{
+    if(S.tabs.some(x=>x.curUrl))closeAllTabs();
+    await clearIdbStores('__op');toast('로그인 정보를 지웠습니다.');
+  });
+  $('chk-btn').addEventListener('click',storageCheck);
+  $('reset-btn').addEventListener('click',resetAll);
+
+  document.querySelectorAll('dialog [data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
+
+  ['pointerdown','keydown','wheel','touchstart'].forEach(t=>document.addEventListener(t,()=>{if(S.unlocked)markAct()},{passive:true,capture:true}));
+
+  document.addEventListener('keydown',ev=>{if(handleKey(ev,false))ev.preventDefault()});
+
+  document.addEventListener('visibilitychange',()=>{
+    if(!S.unlocked)return;
+    if(document.visibilityState==='hidden'&&S.store.set.lockHide)lock();
+    else if(document.visibilityState==='visible')ckIdle();
+  });
+
+  window.addEventListener('pagehide',()=>{if(S.unlocked)lock()});
+  window.addEventListener('pageshow',ev=>{if(ev.persisted&&S.unlocked)lock()});
+  matchMedia('(prefers-color-scheme:light)').addEventListener('change',()=>{if(S.store.set.theme==='system')applyTheme()});
+}
+
+/* =========== 초기화 =========== */
+function isFramed(){try{return self!==top}catch(e){return true}}
+
+function init(){
+  if(isFramed()){$('frame-guard').hidden=false;return}
+  const cOk=hasCrypto(),sOk=storageOk();
+  S.store=sOk?load():defaults();
+  if(!sOk)S.reasons.push('브라우저 저장소 사용 불가.');
+  S.mode=cOk&&sOk?'secure':'limited';
+  applyTheme();bind();regSW();purgeSiteData();
+  // 에이전트 WebSocket 즉시 연결 (DNS 차단 전에 연결 수립)
+  Agent.connect();
+  // PIN을 확인할 수 없는 환경(HTTPS 아님 등)에서는 열지 않는다.
+  showLock(cOk?'unlock':'unavail');
+}
+
+init();
+})();
+</script>
+</body>
+</html>

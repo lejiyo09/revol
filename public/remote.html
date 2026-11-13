@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geo-Zebra 원격 브라우저</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:#0b0f0e; color:#e7efe9; }
+  header { display:flex; gap:.5rem; padding:.5rem; align-items:center; background:#111816; border-bottom:1px solid #1d2a26; }
+  #url { flex:1; padding:.55rem .8rem; border-radius:.6rem; border:1px solid #28433a; background:#0e1513; color:#e7efe9; font-size:14px; }
+  button { padding:.55rem .9rem; border-radius:.6rem; border:1px solid #28433a; background:#15c26a; color:#06150d; font-weight:700; cursor:pointer; }
+  #status { font-size:12px; color:#8fbfa8; min-width:6rem; text-align:right; }
+  #wrap { display:flex; justify-content:center; padding:10px; }
+  canvas { width:100%; max-width:1280px; aspect-ratio:16/9; background:#000; border-radius:.6rem; cursor:default; outline:none; }
+</style>
+</head>
+<body>
+<header>
+  <input id="url" placeholder="사이트 주소 입력 후 Enter (예: naver.com)" value="https://www.google.com">
+  <button id="go">이동</button>
+  <span id="status">연결 중…</span>
+</header>
+<div id="wrap">
+  <canvas id="screen" width="1280" height="720" tabindex="0"></canvas>
+</div>
+<script>
+const W = 1280, H = 720;
+const canvas = document.getElementById('screen');
+const ctx = canvas.getContext('2d');
+const urlBar = document.getElementById('url');
+const statusEl = document.getElementById('status');
+
+const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+const ws = new WebSocket(proto + '://' + location.host + '/remote/');
+
+const img = new Image();
+img.onload = () => ctx.drawImage(img, 0, 0, W, H);
+function draw(data) { img.src = 'data:image/jpeg;base64,' + data; }
+
+ws.onopen = () => statusEl.textContent = '연결됨';
+ws.onclose = () => statusEl.textContent = '끊김';
+ws.onerror = () => statusEl.textContent = '통신 오류';
+ws.onmessage = (e) => {
+  const m = JSON.parse(e.data);
+  if (m.type === 'frame') draw(m.data);
+  else if (m.type === 'url') { urlBar.value = m.url; if (m.title) document.title = m.title; }
+  else if (m.type === 'ready') statusEl.textContent = '준비됨';
+  else if (m.type === 'error') statusEl.textContent = '오류: ' + m.message;
+};
+
+function send(o) { if (ws.readyState === 1) ws.send(JSON.stringify(o)); }
+function coords(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: Math.round((e.clientX - r.left) * (W / r.width)), y: Math.round((e.clientY - r.top) * (H / r.height)) };
+}
+
+canvas.addEventListener('mousedown', e => { const c = coords(e); send({ type:'mouse', action:'mousePressed', x:c.x, y:c.y, button:'left', clickCount:e.detail||1 }); canvas.focus(); });
+canvas.addEventListener('mouseup', e => { const c = coords(e); send({ type:'mouse', action:'mouseReleased', x:c.x, y:c.y, button:'left', clickCount:e.detail||1 }); });
+let lastMove = 0;
+canvas.addEventListener('mousemove', e => { const n = Date.now(); if (n - lastMove < 40) return; lastMove = n; const c = coords(e); send({ type:'mouse', action:'mouseMoved', x:c.x, y:c.y }); });
+canvas.addEventListener('wheel', e => { e.preventDefault(); const c = coords(e); send({ type:'scroll', x:c.x, y:c.y, deltaX:e.deltaX, deltaY:e.deltaY }); }, { passive:false });
+canvas.addEventListener('keydown', e => { e.preventDefault(); send({ type:'key', action:'keyDown', key:e.key, code:e.code, text: e.key.length === 1 ? e.key : '' }); });
+canvas.addEventListener('keyup', e => { e.preventDefault(); send({ type:'key', action:'keyUp', key:e.key, code:e.code }); });
+
+function goUrl() { const u = urlBar.value.trim(); if (!u) return; send({ type:'navigate', url:u }); canvas.focus(); }
+document.getElementById('go').addEventListener('click', goUrl);
+urlBar.addEventListener('keydown', e => { if (e.key === 'Enter') goUrl(); });
+</script>
+</body>
+</html>

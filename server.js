@@ -71,12 +71,33 @@ const agentWss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 * 1
 
 agentWss.on('connection', handleAgentConnection);
 
+// /remote/ → 2단계 원격 브라우저 (Playwright + Chromium). playwright 미설치 시에도
+// 프록시/에이전트가 죽지 않도록 모듈은 연결 시점에 지연 로드한다.
+const remoteWss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 * 1024, perMessageDeflate: false });
+remoteWss.on('connection', (ws) => {
+  let mod;
+  try {
+    mod = require('./remote-browser');
+  } catch (e) {
+    try {
+      ws.send(JSON.stringify({ type: 'error', message: '원격 브라우저 모듈 로드 실패 (playwright 설치 필요): ' + (e && e.message) }));
+      ws.close();
+    } catch {}
+    return;
+  }
+  mod.handleRemoteConnection(ws);
+});
+
 server.on('upgrade', (req, socket, head) => {
   if (req.url.startsWith('/wisp/')) {
     wisp.routeRequest(req, socket, head);
   } else if (req.url.startsWith('/agent/')) {
     agentWss.handleUpgrade(req, socket, head, (ws) => {
       agentWss.emit('connection', ws, req);
+    });
+  } else if (req.url.startsWith('/remote/')) {
+    remoteWss.handleUpgrade(req, socket, head, (ws) => {
+      remoteWss.emit('connection', ws, req);
     });
   } else {
     socket.destroy();
